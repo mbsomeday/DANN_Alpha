@@ -95,6 +95,8 @@ class DANN_Trainer(object):
                 y_true.extend(labels.cpu().numpy())
                 y_pred.extend(preds.cpu().numpy())
 
+                break
+
         val_bc = balanced_accuracy_score(y_true, y_pred)
         cm = confusion_matrix(y_true=y_true, y_pred=y_pred, labels=range(2))
 
@@ -192,6 +194,7 @@ class DANN_Trainer(object):
                 if batch_idx % 50 == 0 or batch_idx == (min_len - 1):
                     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
                           % (EPOCH + 1, self.args.adapt_epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
+                break
 
             if (EPOCH + 1) <= self.args.min_train_epoch:
                 if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
