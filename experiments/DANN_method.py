@@ -97,7 +97,6 @@ class DANN_Trainer(object):
                 y_true.extend(labels.cpu().numpy())
                 y_pred.extend(preds.cpu().numpy())
 
-                break
 
         val_bc = balanced_accuracy_score(y_true, y_pred)
         cm = confusion_matrix(y_true=y_true, y_pred=y_pred, labels=range(2))
@@ -119,32 +118,28 @@ class DANN_Trainer(object):
         self.t_test_loader = DataLoader(self.t_test_dataset, batch_size=self.args.batch_size, shuffle=False)
 
         for item in os.listdir(self.best_weight_dir):
+            weight_path = os.path.join(self.best_weight_dir, item)
+            print(f'weight_path: {weight_path}')
+            state_dict = torch.load(weight_path)
             if item.split('_')[1] == 'enc':
-                load_model(self.enc, os.path.join(self.best_weight_dir, item))
+                self.enc.load_state_dict(state_dict)
             elif item.split('_')[1] == 'clf':
-                load_model(self.clf, os.path.join(self.best_weight_dir, item))
+                self.clf.load_state_dict(state_dict)
             elif item.split('_')[1] == 'fd':
-                load_model(self.fd, os.path.join(self.best_weight_dir, item))
+                self.fd.load_state_dict(state_dict)
 
-        s_train_ba, cm = self.val_on_epoch_end(self.s_train_loader)
-        print("Source Train Balanced Acc: %.2f" % (s_train_ba))
-        if self.args.cm:
-            print(cm)
 
-        s_test_ba, cm = self.val_on_epoch_end(self.s_test_loader)
-        print("Source Test Balanced Acc: %.2f" % (s_test_ba))
-        if self.args.cm:
-            print(cm)
+        print(f'Best Model on source train set:')
+        _ = self.val_on_epoch_end(self.s_train_loader)
 
-        t_train_ba, cm = self.val_on_epoch_end(self.t_train_loader)
-        print("Target Train Balanced Acc: %.2f" % (t_train_ba))
-        if self.args.cm:
-            print(cm)
+        print(f'Best Model on source test set:')
+        _ = self.val_on_epoch_end(self.s_test_loader)
 
-        t_test_ba, cm = self.val_on_epoch_end(self.t_test_loader)
-        print("Source Test Balanced Acc: %.2f" % (t_test_ba))
-        if self.args.cm:
-            print(cm)
+        print(f'Best Model on target train set:')
+        _ = self.val_on_epoch_end(self.t_train_loader)
+
+        print(f'Best Model on target test set:')
+        _ = self.val_on_epoch_end(self.t_test_loader)
 
     def dann(self):
         s_iter_per_epoch = len(self.s_train_loader)
@@ -169,8 +164,8 @@ class DANN_Trainer(object):
                 alpha = adjust_alpha(batch_idx, EPOCH, min_len, self.args.adapt_epochs)
 
                 # 加载数据
-                source, s_labels = source_dict['image'].cuda(), source_dict['ped_label'].cuda()
-                target, t_labels = target_dict['image'].cuda(), target_dict['ped_label'].cuda()
+                source, s_labels = source_dict['image'].to(device), source_dict['ped_label'].to(device)
+                target, t_labels = target_dict['image'].to(device), target_dict['ped_label'].to(device)
 
                 s_deep = self.enc(source)
                 s_out = self.clf(s_deep)
@@ -196,15 +191,17 @@ class DANN_Trainer(object):
                 if batch_idx % 50 == 0 or batch_idx == (min_len - 1):
                     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
                           % (EPOCH + 1, self.args.adapt_epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
-                break
 
             if (EPOCH + 1) <= self.args.min_train_epoch:
                 if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
                     val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
+                    self.early_stopping(EPOCH+1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_epoch_info)
             else:
                 val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
                 self.early_stopping(EPOCH+1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_epoch_info)
-                self.best_weight_dir = self.early_stopping.best_weight_dir
+
+            self.best_weight_dir = self.early_stopping.best_weight_dir
+
             if self.early_stopping.early_stop:
                 print(f'Early Stopping!')
 

@@ -34,6 +34,7 @@ class EarlyStopping():
         self.counter = 0            # 记录loss不变的epoch数目
         self.early_stop = False     # 是否停止训练
         self.delta = delta
+        self.best_weight_dir = None
 
         print('-' * 20 + ' Early Stopping Info ' + '-' * 20)
         print(f'Create early stopping, monitoring [validation {self.monitored_metric}] changes')
@@ -111,6 +112,8 @@ class EarlyStopping():
         # self.monitored_metric_value = metrics[1]
 
         self.best_weight_dir = os.path.join(ckpt_dir, f'{self.cur_epoch}_{metrics[1]:.5f}')
+        if not os.path.exists(self.best_weight_dir):
+            os.makedirs(self.best_weight_dir)
         torch.save(enc.state_dict(), os.path.join(self.best_weight_dir, f'dann_enc_{self.cur_epoch:02d}.pt'))
         torch.save(clf.state_dict(), os.path.join(self.best_weight_dir, f'dann_clf_{self.cur_epoch:02d}.pt'))
         torch.save(fd.state_dict(), os.path.join(self.best_weight_dir, f'dann_disc_{self.cur_epoch:02d}.pt'))
