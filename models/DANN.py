@@ -54,7 +54,7 @@ class Domain_Classifier(nn.Module):
             nn.LeakyReLU(0.2),
             nn.Linear(1280, 500),
             nn.LeakyReLU(0.2),
-            nn.Linear(500, 2),
+            nn.Linear(500, 1),
         )
 
         for m in self.modules():
