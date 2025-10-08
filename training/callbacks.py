@@ -109,7 +109,7 @@ class EarlyStopping():
 
         self.del_redundant_weights(ckpt_dir)
         save_name = f"{self.save_prefix}-{self.cur_epoch:02d}-{metrics[1]:.5f}.pth"     # 格式：prefix_{epoch}_{balanced_acc}.pth
-        # self.monitored_metric_value = metrics[1]
+        self.monitored_metric_value = metrics[1]
 
         self.best_weight_dir = os.path.join(ckpt_dir, f'{self.cur_epoch}_{metrics[1]:.5f}')
         if not os.path.exists(self.best_weight_dir):
