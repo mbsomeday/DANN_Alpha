@@ -84,8 +84,8 @@ class DANN_Trainer(object):
         val_loss = 0
 
         with torch.no_grad():
-            for batch_idx, (images, labels) in enumerate(tqdm(data_loader)):
-                images, labels = images.to(device), labels.to(device)
+            for batch_idx, data_dict in enumerate(tqdm(data_loader)):
+                images, labels = data_dict['image'].to(device), data_dict['ped_label'].to(device)
 
                 logits = self.clf(self.enc(images))
                 preds = torch.argmax(logits, dim=1)
