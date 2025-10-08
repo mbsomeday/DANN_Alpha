@@ -8,7 +8,7 @@ def get_args():
     parser.add_argument('--source', default=['D1'])
     parser.add_argument('--target', default=['D2'])
 
-    parser.add_argument('--batch_size', default=4)
+    parser.add_argument('--batch_size', default=4, type=int)
 
     parser.add_argument('--src_epochs', default=50)
     parser.add_argument('--adapt_epochs', default=50)
