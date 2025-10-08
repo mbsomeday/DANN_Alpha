@@ -193,8 +193,6 @@ class DANN_Trainer(object):
                     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
                           % (EPOCH + 1, self.args.adapt_epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
 
-                break
-
             if (EPOCH + 1) <= self.args.min_train_epoch:
                 if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
                     val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
@@ -202,7 +200,8 @@ class DANN_Trainer(object):
                 val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
                 self.early_stopping(EPOCH+1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_epoch_info)
                 self.best_weight_dir = self.early_stopping.best_weight_dir
-
+            if self.early_stopping.early_stop:
+                print(f'Early Stopping!')
 
 
 
