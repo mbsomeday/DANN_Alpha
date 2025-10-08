@@ -59,8 +59,8 @@ class DANN_Trainer(object):
 
         '''
         print('-' * 40 + ' Args ' + '-' * 40)
+        self.callback_dir = 'dann' + '_' + self.args.source[0] + self.args.target[0]
 
-        self.callback_dir = 'dsCls' + '_' + ''.join(self.args.ds_name_list) + '_' + ''.join(self.args.ds_labels)
         self.callback_path = os.path.join(os.getcwd(), self.callback_dir)
         if not os.path.exists(self.callback_path):
             os.mkdir(self.callback_path)

@@ -11,6 +11,7 @@ def get_args():
     parser.add_argument('--batch_size', default=4)
 
     parser.add_argument('--src_epochs', default=50)
+    parser.add_argument('--adapt_epochs', default=50)
     parser.add_argument('--adapt_epochs ', default=50)
     parser.add_argument('--weight_decay', type=float, default=1e-5)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -18,6 +19,11 @@ def get_args():
     parser.add_argument('--min_train_epoch', default=30)
 
     parser.add_argument('--model_path', type=str, default='./model')
+    parser.add_argument('--seed', default=13)
+
+    # callbacks
+    parser.add_argument('--top_k', default=2)
+    parser.add_argument('--patience', default=10)
 
     args = parser.parse_args()
 
@@ -25,6 +31,7 @@ def get_args():
 
 
 
+args = get_args()
 
 manual_seed = args.seed
 random.seed(manual_seed)
@@ -42,7 +49,6 @@ if torch.cuda.is_available():
 start_time = datetime.datetime.now()
 print("Started at " + str(start_time.strftime('%Y-%m-%d %H:%M:%S')))
 
-args = get_args()
 dann_cls = DANN_Trainer(args)
 dann_cls.dann()
 
