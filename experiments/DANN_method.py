@@ -18,7 +18,7 @@ class DANN_Trainer(object):
     def __init__(self, args):
         self.args = args
         # args.adapt_test_epoch = args.adapt_epochs // 10
-        args.adapt_test_epoch = 3
+        args.adapt_test_epoch = 1
 
         self.print_args()
 

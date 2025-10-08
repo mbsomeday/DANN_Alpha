@@ -80,7 +80,12 @@ class EarlyStopping():
 
 
     def del_redundant_weights(self, ckpt_dir):
-        weights_dir_list = os.listdir(ckpt_dir)
+        temp = os.listdir(ckpt_dir)
+        weights_dir_list = []
+        for f_path in temp:
+            if os.path.isdir(os.path.join(ckpt_dir, f_path)):
+                weights_dir_list.append(f_path)
+
         if len(weights_dir_list) > self.top_k - 1:
             sorted = []
             for dir_name in weights_dir_list:
