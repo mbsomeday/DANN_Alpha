@@ -17,6 +17,7 @@ from utils import DotDict, load_model
 class DANN_Trainer(object):
     def __init__(self, args):
         self.args = args
+        args.adapt_test_epoch = args.adapt_epochs // 10
         self.print_args()
 
         # 加载data
@@ -189,6 +190,8 @@ class DANN_Trainer(object):
                 if batch_idx % 50 == 0 or batch_idx == (min_len - 1):
                     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
                           % (EPOCH + 1, self.args.adapt_epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
+
+                break
 
             if (EPOCH + 1) <= self.args.min_train_epoch:
                 if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
