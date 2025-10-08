@@ -55,6 +55,8 @@ class DANN_Trainer(object):
         self.fake_label = torch.FloatTensor(self.args.batch_size, 1).fill_(0).to(device)
         self.real_label = torch.FloatTensor(self.args.batch_size, 1).fill_(1).to(device)
 
+        self.best_weight_dir = None
+
 
     def print_args(self):
         '''
