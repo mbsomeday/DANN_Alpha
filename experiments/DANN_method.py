@@ -129,14 +129,14 @@ class DANN_Trainer(object):
                 self.fd.load_state_dict(state_dict)
 
 
-        print(f'Best Model on source train set:')
-        _ = self.val_on_epoch_end(self.s_train_loader)
+        # print(f'Best Model on source train set:')
+        # _ = self.val_on_epoch_end(self.s_train_loader)
 
         print(f'Best Model on source test set:')
         _ = self.val_on_epoch_end(self.s_test_loader)
 
-        print(f'Best Model on target train set:')
-        _ = self.val_on_epoch_end(self.t_train_loader)
+        # print(f'Best Model on target train set:')
+        # _ = self.val_on_epoch_end(self.t_train_loader)
 
         print(f'Best Model on target test set:')
         _ = self.val_on_epoch_end(self.t_test_loader)
