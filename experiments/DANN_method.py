@@ -17,9 +17,6 @@ from utils import DotDict, load_model
 class DANN_Trainer(object):
     def __init__(self, args):
         self.args = args
-        args.adapt_test_epoch = args.adapt_epochs // 10
-        # args.adapt_test_epoch = 1
-
         self.print_args()
 
         # 加载data
@@ -47,7 +44,6 @@ class DANN_Trainer(object):
         # callbacks
         self.early_stopping = EarlyStopping(self.callback_path, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
 
-        self.best_acc = 0   # acc
         self.best_ba = 0    # balanced acc
         self.time_taken = None
 
@@ -64,7 +60,7 @@ class DANN_Trainer(object):
 
         '''
         print('-' * 40 + ' Args ' + '-' * 40)
-        self.callback_dir = 'dann' + '_' + self.args.source[0] + self.args.target[0]
+        self.callback_dir = 'DANN' + '_' + self.args.source[0] + self.args.target[0]
 
         self.callback_path = os.path.join(os.getcwd(), self.callback_dir)
         if not os.path.exists(self.callback_path):
@@ -96,7 +92,6 @@ class DANN_Trainer(object):
 
                 y_true.extend(labels.cpu().numpy())
                 y_pred.extend(preds.cpu().numpy())
-
 
         val_bc = balanced_accuracy_score(y_true, y_pred)
         cm = confusion_matrix(y_true=y_true, y_pred=y_pred, labels=range(2))
@@ -141,7 +136,7 @@ class DANN_Trainer(object):
         print(f'Best Model on target test set:')
         _ = self.val_on_epoch_end(self.t_test_loader)
 
-    def dann(self):
+    def train(self):
         s_iter_per_epoch = len(self.s_train_loader)
         t_iter_per_epoch = len(self.t_train_loader)
         min_len = min(s_iter_per_epoch, t_iter_per_epoch)
@@ -151,7 +146,7 @@ class DANN_Trainer(object):
         print("Target iters per epoch: %d" % (t_iter_per_epoch))
         print("iters per epoch: %d" % (min(s_iter_per_epoch, t_iter_per_epoch)))
 
-        self.optimizer = optim.Adam(list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()), self.args.lr, betas=[0.5, 0.999], weight_decay=self.args.weight_decay)
+        self.optimizer = optim.Adam(list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()), self.args.lr, betas=(0.5, 0.999), weight_decay=self.args.weight_decay)
 
         for EPOCH in range(self.args.adapt_epochs):
             self.clf.train()
@@ -194,8 +189,7 @@ class DANN_Trainer(object):
 
             if (EPOCH + 1) <= self.args.min_train_epoch:
                 if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
-                    val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
-                    self.early_stopping(EPOCH+1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_epoch_info)
+                    _ = self.val_on_epoch_end(self.t_val_loader)
             else:
                 val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
                 self.early_stopping(EPOCH+1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_epoch_info)

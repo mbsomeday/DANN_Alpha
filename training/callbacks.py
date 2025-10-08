@@ -81,6 +81,11 @@ class EarlyStopping():
 
 
     def del_redundant_weights(self, ckpt_dir):
+        '''
+            模型按 {epoch}_{loss}来保存的，因此删除的时候需要直接删掉整个文件夹
+        '''
+
+        # 先整合保存权重的文件夹
         temp = os.listdir(ckpt_dir)
         weights_dir_list = []
         for f_path in temp:
@@ -108,8 +113,8 @@ class EarlyStopping():
         print(f'Performance [{self.monitored_metric}] better ({metrics[0]} --> {metrics[1]}). Saving Model.')
 
         self.del_redundant_weights(ckpt_dir)
-        save_name = f"{self.save_prefix}-{self.cur_epoch:02d}-{metrics[1]:.5f}.pth"     # 格式：prefix_{epoch}_{balanced_acc}.pth
-        self.monitored_metric_value = metrics[1]
+        # save_name = f"{self.save_prefix}-{self.cur_epoch:02d}-{metrics[1]:.5f}.pth"     # 格式：prefix_{epoch}_{balanced_acc}.pth
+        self.monitored_metric_value = metrics[1]        # 更新最优值，用于后续比较
 
         self.best_weight_dir = os.path.join(ckpt_dir, f'{self.cur_epoch}_{metrics[1]:.5f}')
         if not os.path.exists(self.best_weight_dir):

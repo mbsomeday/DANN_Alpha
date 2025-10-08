@@ -3,32 +3,37 @@ import numpy as np
 
 from experiments.DANN_method import DANN_Trainer
 
+
 def get_args():
     parser = argparse.ArgumentParser()
+
+    # data
     parser.add_argument('--source', default=['D1'])
     parser.add_argument('--target', default=['D2'])
-
     parser.add_argument('--batch_size', default=4, type=int)
 
+    # train
     parser.add_argument('--src_epochs', type=int, default=50)
     parser.add_argument('--adapt_epochs', type=int, default=50)
-    parser.add_argument('--adapt_epochs ', type=int, default=50)
+    parser.add_argument('--min_train_epoch', type=int, default=30)
     parser.add_argument('--weight_decay', type=float, default=1e-5)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--monitored_metric', default='loss')
-    parser.add_argument('--min_train_epoch', default=30)
-
-    parser.add_argument('--model_path', type=str, default='./model')
-    parser.add_argument('--seed', default=13)
 
     # callbacks
     parser.add_argument('--top_k', default=2)
     parser.add_argument('--patience', default=10)
 
+    # test
+    parser.add_argument('--adapt_test_epoch', type=int, default=5)
+
+    parser.add_argument('--model_path', type=str, default='./model')
+    parser.add_argument('--seed', default=13)
+
+
     args = parser.parse_args()
 
     return args
-
 
 
 args = get_args()
@@ -50,7 +55,7 @@ start_time = datetime.datetime.now()
 print("Started at " + str(start_time.strftime('%Y-%m-%d %H:%M:%S')))
 
 dann_cls = DANN_Trainer(args)
-dann_cls.dann()
+dann_cls.train()
 dann_cls.test()
 
 
