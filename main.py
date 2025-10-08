@@ -10,9 +10,9 @@ def get_args():
 
     parser.add_argument('--batch_size', default=4, type=int)
 
-    parser.add_argument('--src_epochs', type=int, default=4)
-    parser.add_argument('--adapt_epochs', type=int, default=4)
-    parser.add_argument('--adapt_epochs ', default=4, type=int)
+    parser.add_argument('--src_epochs', type=int, default=50)
+    parser.add_argument('--adapt_epochs', type=int, default=50)
+    parser.add_argument('--adapt_epochs ', type=int, default=50)
     parser.add_argument('--weight_decay', type=float, default=1e-5)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--monitored_metric', default='loss')
