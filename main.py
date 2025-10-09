@@ -8,8 +8,8 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     # data
-    parser.add_argument('--source', default=['D1'])
-    parser.add_argument('--target', default=['D2'])
+    parser.add_argument('--source', nargs='+', default=['D1'])
+    parser.add_argument('--target', nargs='+', default=['D2'])
     parser.add_argument('--batch_size', default=4, type=int)
 
     # train
