@@ -13,7 +13,7 @@ def get_args():
     parser.add_argument('--batch_size', default=4, type=int)
 
     # train
-    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--min_train_epoch', type=int, default=30)
     parser.add_argument('--weight_decay', type=float, default=1e-5)
     parser.add_argument('--lr', type=float, default=1e-4)
