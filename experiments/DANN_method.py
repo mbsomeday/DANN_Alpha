@@ -20,13 +20,13 @@ class DANN_Trainer(object):
         self.print_args()
 
         # 加载data
-        self.s_train_dataset = my_dataset(ds_name_list=args.source, path_key='Stage6_org', txt_name='train.txt')
+        self.s_train_dataset = my_dataset(ds_name_list=args.source, path_key='Stage6_org', txt_name='augmentation_train.txt')
         self.s_train_loader = DataLoader(self.s_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=True)
 
         self.s_val_dataset = my_dataset(ds_name_list=args.source, path_key='Stage6_org', txt_name='val.txt')
         self.s_val_loader = DataLoader(self.s_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=True)
 
-        self.t_train_dataset = my_dataset(ds_name_list=args.target, path_key='Stage6_org', txt_name='train.txt')
+        self.t_train_dataset = my_dataset(ds_name_list=args.target, path_key='Stage6_org', txt_name='augmentation_train.txt')
         self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=True)
 
         self.t_val_dataset = my_dataset(ds_name_list=args.target, path_key='Stage6_org', txt_name='val.txt')
