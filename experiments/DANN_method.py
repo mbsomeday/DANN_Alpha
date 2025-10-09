@@ -160,7 +160,7 @@ class DANN_Trainer(object):
 
                 # 加载数据
                 source, s_labels = source_dict['image'].to(device), source_dict['ped_label'].to(device)
-                target, t_labels = target_dict['image'].to(device), target_dict['ped_label'].to(device)
+                target, _ = target_dict['image'].to(device), target_dict['ped_label'].to(device)
 
                 s_deep = self.enc(source)
                 s_out = self.clf(s_deep)
