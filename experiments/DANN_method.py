@@ -198,6 +198,7 @@ class DANN_Trainer(object):
 
             if self.early_stopping.early_stop:
                 print(f'Early Stopping!')
+                break
 
 
 
