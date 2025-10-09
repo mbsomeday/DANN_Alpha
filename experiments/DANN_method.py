@@ -156,7 +156,7 @@ class DANN_Trainer(object):
             for batch_idx, (source_dict, target_dict) in enumerate(zip(self.s_train_loader, self.t_train_loader)):
                 # 调节domain classifier的alpha
                 total_iters += 1
-                alpha = adjust_alpha(batch_idx, EPOCH, min_len, self.args.adapt_epochs)
+                alpha = adjust_alpha(batch_idx, EPOCH, min_len, self.args.epochs)
 
                 # 加载数据
                 source, s_labels = source_dict['image'].to(device), source_dict['ped_label'].to(device)
@@ -185,7 +185,7 @@ class DANN_Trainer(object):
 
                 if batch_idx % 50 == 0 or batch_idx == (min_len - 1):
                     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
-                          % (EPOCH + 1, self.args.adapt_epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
+                          % (EPOCH + 1, self.args.epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
 
             if (EPOCH + 1) <= self.args.min_train_epoch:
                 if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
