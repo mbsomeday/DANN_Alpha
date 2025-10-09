@@ -11,7 +11,7 @@ from models.DANN import Feature_extractor, Label_classifier, Domain_Classifier
 from data.dataset import my_dataset
 from configs.ds_path import device
 from training.callbacks import EarlyStopping
-from utils import DotDict, load_model
+from utils import DotDict
 
 
 class DANN_Trainer(object):
