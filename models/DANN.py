@@ -22,6 +22,7 @@ class Feature_extractor(nn.Module):
     def forward(self, x):
         x = self.encoder(x)
         x = torch.flatten(x, 1)
+        x = F.relu(x)
         return x
 
 
@@ -41,7 +42,6 @@ class Label_classifier(nn.Module):
 
     def forward(self, x):
         x = self.label_classifier(x)
-        x = torch.sigmoid(x)
         return x
 
 
