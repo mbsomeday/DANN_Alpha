@@ -148,7 +148,7 @@ class DANN_Trainer(object):
 
         self.optimizer = optim.Adam(list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()), self.args.lr, betas=(0.5, 0.999), weight_decay=self.args.weight_decay)
 
-        for EPOCH in range(self.args.adapt_epochs):
+        for EPOCH in range(self.args.epochs):
             self.clf.train()
             self.enc.train()
             self.fd.train()
