@@ -43,18 +43,18 @@ class HPSelection():
         self.target = ['D2']
 
         self.warmup_epochs = 3
-        # self.min_epochs = 10
-        # self.max_epochs = 50
-        # self.mini_train_num = 1000
-        # self.mini_val_num = 1000
-        # self.mini_test_num = 1000
+        self.min_epochs = 10
+        self.max_epochs = 50
+        self.mini_train_num = 1000
+        self.mini_val_num = 1000
+        self.mini_test_num = 1000
         self.patience = 5
 
-        self.min_epochs = 2
-        self.max_epochs = 5
-        self.mini_train_num = 10
-        self.mini_val_num = 10
-        self.mini_test_num = 10
+        # self.min_epochs = 2
+        # self.max_epochs = 5
+        # self.mini_train_num = 10
+        # self.mini_val_num = 10
+        # self.mini_test_num = 10
 
         self.best_weight_dir = None
 
@@ -136,7 +136,7 @@ class HPSelection():
         return f'{tn}, {fp}, {fn}, {tp}'
 
 
-    def test(self, weight_dir):
+    def test(self):
         '''
             最终在test set上进行检验
         '''
@@ -151,8 +151,8 @@ class HPSelection():
         self.t_mini_testset, _ = random_split(t_testset, [self.mini_test_num, len(t_testset) - self.mini_test_num])
         self.t_mini_testloader = DataLoader(self.t_mini_testset, batch_size=64, shuffle=False)
 
-        for item in os.listdir(weight_dir):
-            weight_path = os.path.join(weight_dir, item)
+        for item in os.listdir(self.opts.weight_dir):
+            weight_path = os.path.join(self.opts.weight_dir, item)
             print(f'weight_path: {weight_path}')
             state_dict = torch.load(weight_path)
             if item.split('_')[1] == 'enc':
@@ -170,7 +170,7 @@ class HPSelection():
 
 
         with open(self.opts.test_txt, 'a') as f:
-            msg = f'model_weights: {weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f"}, target test ba: {t_test_info["balanced_accuracy"]:.4f"}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
+            msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f"}, target test ba: {t_test_info["balanced_accuracy"]:.4f"}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
             f.write(msg)
 
 

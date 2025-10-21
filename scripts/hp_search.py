@@ -27,15 +27,14 @@ def get_args():
 
 
 args = get_args()
-args.isTrain = True
 hp = HPSelection(args)
 
 if args.isTrain:
     print(f'Current mode: Train')
     hp.hp_search()
-# else:
-#     print(f'Current mode: Test')
-#     hp.test()
+else:
+    print(f'Current mode: Test')
+    hp.test()
 
 
 
