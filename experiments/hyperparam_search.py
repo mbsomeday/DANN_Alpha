@@ -18,7 +18,6 @@ from data.dataset import my_dataset
 from utils import DEVICE, load_model, adjust_alpha
 
 
-
 class HPSelection():
     def __init__(self, opts):
         super().__init__()
@@ -71,7 +70,6 @@ class HPSelection():
             self.train_setup()
         print('共有的超参数组合数：', len(self.all_combinations))
 
-
     def train_setup(self):
         # source train
         s_trainset = my_dataset(ds_name_list=self.source, path_key='Stage6_org', txt_name='train.txt')
@@ -97,8 +95,6 @@ class HPSelection():
 
         self.txt_dir = os.path.join(self.opts.hp_dir, 'hp_txt')
         os.makedirs(self.txt_dir, exist_ok=True)
-
-
 
     def val_on_epoch_end(self, data_loader, epoch=None):
 
@@ -137,7 +133,6 @@ class HPSelection():
         tn, fp, fn, tp = cm.ravel()
         return f'{tn}, {fp}, {fn}, {tp}'
 
-
     def test(self):
         '''
             最终在test set上进行检验
@@ -170,11 +165,9 @@ class HPSelection():
         print(f'Best Model on target test set:')
         t_test_info = self.val_on_epoch_end(data_loader=self.t_mini_testloader)
 
-
         with open(self.opts.test_txt, 'a') as f:
             msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f"}, target test ba: {t_test_info["balanced_accuracy"]:.4f"}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
             f.write(msg)
-
 
     def train_one_epoch(self, epoch):
         train_info = {
@@ -188,9 +181,10 @@ class HPSelection():
         y_true = []
         y_pred = []
 
-        for batch_idx, (source_dict, target_dict) in tqdm(enumerate(zip(self.s_mini_trainloader, self.t_mini_trainloader)),
-                                                          total=len(self.s_mini_trainloader), desc=f'Epoch {epoch} train'
-                                                          ):
+        for batch_idx, (source_dict, target_dict) in tqdm(
+                enumerate(zip(self.s_mini_trainloader, self.t_mini_trainloader)),
+                total=len(self.s_mini_trainloader), desc=f'Epoch {epoch} train'
+                ):
             # 调节domain classifier的alpha
             self.total_iters += 1
             alpha = adjust_alpha(batch_idx, epoch, self.min_len, self.max_epochs)
@@ -231,16 +225,16 @@ class HPSelection():
 
         return train_info
 
-
-
     def hp_search(self):
         for comb_idx, comb_info in enumerate(self.all_combinations):
             self.batch_size, self.base_lr, optimizer_type, scheduler_type = comb_info
 
             # data loader
-            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=True)
+            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True,
+                                                 drop_last=True)
             self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False, drop_last=True)
-            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=True)
+            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True,
+                                                 drop_last=True)
             self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False, drop_last=True)
 
             # 用于 domain classifier训练的label
@@ -250,11 +244,11 @@ class HPSelection():
             # get combination name
             comb = [str(self.batch_size), str(self.base_lr), optimizer_type, scheduler_type]
             comb_name = '_'.join(comb)
-            cur_txt_path = os.path.join(self.txt_dir, str(comb_idx+1)+'.txt')
+            cur_txt_path = os.path.join(self.txt_dir, str(comb_idx + 1) + '.txt')
             with open(cur_txt_path, 'a') as f:
                 f.write('Combination: ' + comb_name + '\n')
 
-            print('=' * 30 + f' HP Comb: {comb_name} ({comb_idx+1}/{len(self.all_combinations)})' + '=' * 30)
+            print('=' * 30 + f' HP Comb: {comb_name} ({comb_idx + 1}/{len(self.all_combinations)})' + '=' * 30)
 
             # callbacks
             callback_save_path = os.path.join(self.opts.hp_dir, comb_name)
@@ -264,12 +258,17 @@ class HPSelection():
             print(f'comb_name:{comb_name}, cur_txt_path:{cur_txt_path}, callback_save_dir:{callback_save_path}')
 
             if optimizer_type == 'Adam':
-                self.optimizer = Adam(params=list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()), lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
+                self.optimizer = Adam(
+                    params=list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()),
+                    lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
             elif optimizer_type == 'SGD':
-                self.optimizer = SGD(list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()), lr=self.base_lr, momentum=0.9, weight_decay=0.0001)
+                self.optimizer = SGD(
+                    list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()),
+                    lr=self.base_lr, momentum=0.9, weight_decay=0.0001)
 
             if scheduler_type == 'COS':
-                self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_epochs-self.warmup_epochs)
+                self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
+                                                                            T_max=self.max_epochs - self.warmup_epochs)
             elif scheduler_type == 'EXP':
                 self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.95)
 
@@ -279,8 +278,8 @@ class HPSelection():
             self.total_iters = 0
 
             for EPOCH in range(self.max_epochs):
-                train_info = self.train_one_epoch(EPOCH+1)
-                val_info = self.val_on_epoch_end(self.t_mini_valloader, epoch=(EPOCH+1))
+                train_info = self.train_one_epoch(EPOCH + 1)
+                val_info = self.val_on_epoch_end(self.t_mini_valloader, epoch=(EPOCH + 1))
                 self.early_stopping(EPOCH + 1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_info)
 
                 # lr schedule
@@ -295,7 +294,7 @@ class HPSelection():
                 if (EPOCH + 1) <= self.min_epochs:
                     self.early_stopping.counter = 0
                     self.early_stopping.early_stop = False
-                else:        # 当训练次数超过最低epoch时，其中early_stop策略
+                else:  # 当训练次数超过最低epoch时，其中early_stop策略
                     self.best_weight_dir = self.early_stopping.best_weight_dir
                     if self.early_stopping.early_stop:
                         print(f'Early Stopping!')
@@ -325,44 +324,3 @@ class HPSelection():
     def get_print_msg(self, info_dict):
         msg = ', '.join([f"{k}: {self._get_msg_format(k).format(v)}" for k, v in info_dict.items()]) + '\n'
         return msg
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
