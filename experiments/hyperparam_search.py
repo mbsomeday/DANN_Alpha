@@ -291,9 +291,11 @@ class HPSelection():
 
                 self.write_to_txt(EPOCH, txt_path=cur_txt_path, train_info=train_info, val_info=val_info)
 
-                # 当训练次数超过最低epoch时，其中early_stop策略
-                if (EPOCH + 1) > self.min_epochs:
-
+                # 在低于min train epoch时，每次重置early stop的参数
+                if (EPOCH + 1) <= self.min_epochs:
+                    self.early_stopping.counter = 0
+                    self.early_stopping.early_stop = False
+                else:        # 当训练次数超过最低epoch时，其中early_stop策略
                     self.best_weight_dir = self.early_stopping.best_weight_dir
                     if self.early_stopping.early_stop:
                         print(f'Early Stopping!')
