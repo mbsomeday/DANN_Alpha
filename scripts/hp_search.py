@@ -18,7 +18,7 @@ def get_args():
     parser.add_argument('--hp_dir', type=str, default=r'D:\my_phd\Results\HP_Search\HPcomb')
 
     # test
-    parser.add_argument('--model_weights', type=str, default=None)
+    parser.add_argument('--weight_dir', type=str, default=None)
     parser.add_argument('--test_txt', type=str, default=r'D:\my_phd\Results\res.txt', help='txt file that records test results')
 
     args = parser.parse_args()
