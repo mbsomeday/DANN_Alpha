@@ -100,7 +100,7 @@ class HPSelection():
 
 
 
-    def val_on_epoch_end(self, data_loader):
+    def val_on_epoch_end(self, data_loader, epoch=None):
 
         self.enc.eval()
         self.clf.eval()
@@ -111,8 +111,10 @@ class HPSelection():
         y_true = []
         y_pred = []
 
+        epoch_msg = str(epoch) if epoch is not None else ''
+
         with torch.no_grad():
-            for batch_idx, data_dict in enumerate(tqdm(data_loader)):
+            for batch_idx, data_dict in enumerate(tqdm(data_loader, desc=f'Epoch {epoch_msg} val')):
                 images, labels = data_dict['image'].to(DEVICE), data_dict['ped_label'].to(DEVICE)
 
                 logits = self.clf(self.enc(images))
@@ -186,7 +188,9 @@ class HPSelection():
         y_true = []
         y_pred = []
 
-        for batch_idx, (source_dict, target_dict) in enumerate(zip(self.s_mini_trainloader, self.t_mini_trainloader)):
+        for batch_idx, (source_dict, target_dict) in tqdm(enumerate(zip(self.s_mini_trainloader, self.t_mini_trainloader)),
+                                                          total=len(self.s_mini_trainloader), desc=f'Epoch {epoch} train'
+                                                          ):
             # 调节domain classifier的alpha
             self.total_iters += 1
             alpha = adjust_alpha(batch_idx, epoch, self.min_len, self.max_epochs)
@@ -276,7 +280,8 @@ class HPSelection():
 
             for EPOCH in range(self.max_epochs):
                 train_info = self.train_one_epoch(EPOCH+1)
-                val_info = self.val_on_epoch_end(self.t_mini_valloader)
+                val_info = self.val_on_epoch_end(self.t_mini_valloader, epoch=(EPOCH+1))
+                self.early_stopping(EPOCH + 1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_info)
 
                 # lr schedule
                 if EPOCH <= self.warmup_epochs:
@@ -288,8 +293,6 @@ class HPSelection():
 
                 # 当训练次数超过最低epoch时，其中early_stop策略
                 if (EPOCH + 1) > self.min_epochs:
-                    val_epoch_info = self.val_on_epoch_end(data_loader=self.t_mini_valloader)
-                    self.early_stopping(EPOCH + 1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_epoch_info)
 
                     self.best_weight_dir = self.early_stopping.best_weight_dir
                     if self.early_stopping.early_stop:
