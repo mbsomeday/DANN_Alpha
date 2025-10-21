@@ -39,7 +39,7 @@ class HPSelection():
 
         # 固定的hyperparamters
         self.source = ['D1']
-        self.target = ['D2']
+        self.target = ['D3']
 
         self.warmup_epochs = 3
         self.min_epochs = 10
