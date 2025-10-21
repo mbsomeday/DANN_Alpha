@@ -6,12 +6,11 @@ from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from utils import adjust_alpha
+from utils import adjust_alpha, DotDict
 from models.DANN import Feature_extractor, Label_classifier, Domain_Classifier
 from data.dataset import my_dataset
-from configs.ds_path import device
+from configs.ds_path import DEVICE
 from training.callbacks import EarlyStopping
-from utils import DotDict
 
 
 class DANN_Trainer(object):
@@ -33,9 +32,9 @@ class DANN_Trainer(object):
         self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=True)
 
         # 加载模型
-        self.enc = Feature_extractor().to(device)
-        self.clf = Label_classifier().to(device)
-        self.fd = Domain_Classifier().to(device)
+        self.enc = Feature_extractor().to(DEVICE)
+        self.clf = Label_classifier().to(DEVICE)
+        self.fd = Domain_Classifier().to(DEVICE)
 
         # 损失函数
         self.ce = nn.CrossEntropyLoss()
@@ -48,8 +47,8 @@ class DANN_Trainer(object):
         self.time_taken = None
 
         # 用于 domain classifier训练的label
-        self.fake_label = torch.FloatTensor(self.args.batch_size, 1).fill_(0).to(device)
-        self.real_label = torch.FloatTensor(self.args.batch_size, 1).fill_(1).to(device)
+        self.fake_label = torch.FloatTensor(self.args.batch_size, 1).fill_(0).to(DEVICE)
+        self.real_label = torch.FloatTensor(self.args.batch_size, 1).fill_(1).to(DEVICE)
 
         self.best_weight_dir = None
 
@@ -83,7 +82,7 @@ class DANN_Trainer(object):
 
         with torch.no_grad():
             for batch_idx, data_dict in enumerate(tqdm(data_loader)):
-                images, labels = data_dict['image'].to(device), data_dict['ped_label'].to(device)
+                images, labels = data_dict['image'].to(DEVICE), data_dict['ped_label'].to(DEVICE)
 
                 logits = self.clf(self.enc(images))
                 preds = torch.argmax(logits, dim=1)
@@ -156,11 +155,11 @@ class DANN_Trainer(object):
             for batch_idx, (source_dict, target_dict) in enumerate(zip(self.s_train_loader, self.t_train_loader)):
                 # 调节domain classifier的alpha
                 total_iters += 1
-                alpha = adjust_alpha(batch_idx, EPOCH, min_len, self.args.epochs)
+                alpha = adjust_alpha(batch_idx, (EPOCH+1), min_len, self.args.epochs)
 
                 # 加载数据
-                source, s_labels = source_dict['image'].to(device), source_dict['ped_label'].to(device)
-                target, _ = target_dict['image'].to(device), target_dict['ped_label'].to(device)
+                source, s_labels = source_dict['image'].to(DEVICE), source_dict['ped_label'].to(DEVICE)
+                target, _ = target_dict['image'].to(DEVICE), target_dict['ped_label'].to(DEVICE)
 
                 s_deep = self.enc(source)
                 s_out = self.clf(s_deep)

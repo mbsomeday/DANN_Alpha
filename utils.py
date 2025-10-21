@@ -3,6 +3,8 @@
 import math, torch
 from torch.autograd import Function
 
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 class GradReverse(Function):
     @staticmethod

@@ -180,7 +180,7 @@ elif 'jiawei_data' in cwd:
 else:
     raise Exception('运行平台未知，需配置路径!')
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 
