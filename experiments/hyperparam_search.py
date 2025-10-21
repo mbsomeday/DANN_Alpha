@@ -141,12 +141,12 @@ class HPSelection():
         # source test set
         s_testset = my_dataset(ds_name_list=self.source, path_key='Stage6_org', txt_name='test.txt')
         self.s_mini_testset, _ = random_split(s_testset, [self.mini_test_num, len(s_testset) - self.mini_test_num])
-        self.s_mini_testloader = DataLoader(self.s_mini_testset, batch_size=64, shuffle=False)
+        self.s_mini_testloader = DataLoader(self.s_mini_testset, batch_size=128, shuffle=False)
 
         # target test set
         t_testset = my_dataset(ds_name_list=self.target, path_key='Stage6_org', txt_name='test.txt')
         self.t_mini_testset, _ = random_split(t_testset, [self.mini_test_num, len(t_testset) - self.mini_test_num])
-        self.t_mini_testloader = DataLoader(self.t_mini_testset, batch_size=64, shuffle=False)
+        self.t_mini_testloader = DataLoader(self.t_mini_testset, batch_size=128, shuffle=False)
 
         for item in os.listdir(self.opts.weight_dir):
             weight_path = os.path.join(self.opts.weight_dir, item)
@@ -166,7 +166,7 @@ class HPSelection():
         t_test_info = self.val_on_epoch_end(data_loader=self.t_mini_testloader)
 
         with open(self.opts.test_txt, 'a') as f:
-            msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f"}, target test ba: {t_test_info["balanced_accuracy"]:.4f"}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
+            msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f}, target test ba: {t_test_info["balanced_accuracy"]:.4f}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
             f.write(msg)
 
     def train_one_epoch(self, epoch):
