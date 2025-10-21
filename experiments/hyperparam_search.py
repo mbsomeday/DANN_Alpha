@@ -239,9 +239,9 @@ class HPSelection():
 
             # data loader
             self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=True)
-            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=self.batch_size, shuffle=False, drop_last=True)
+            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False, drop_last=True)
             self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=True)
-            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=self.batch_size, shuffle=False, drop_last=True)
+            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False, drop_last=True)
 
             # 用于 domain classifier训练的label
             self.fake_label = torch.FloatTensor(self.batch_size, 1).fill_(0).to(DEVICE)
