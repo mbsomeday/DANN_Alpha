@@ -225,7 +225,7 @@ class HPSelection():
         ):
             # 调节domain classifier的alpha
             self.total_iters += 1
-            alpha = adjust_alpha(batch_idx, epoch, self.min_len, self.max_epochs)
+            alpha = adjust_alpha(batch_idx, epoch, self.min_len, self.max_epochs).to(DEVICE)
 
             # 加载数据
             source, s_labels = source_dict['image'].to(DEVICE), source_dict['ped_label'].to(DEVICE)
