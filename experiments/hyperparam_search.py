@@ -11,8 +11,8 @@ from torchvision import models
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 import matplotlib.pyplot as plt
-from training.callbacks import EarlyStopping
 
+from training.callbacks import EarlyStopping
 from models.DANN import Feature_extractor, Label_classifier, Domain_Classifier
 from data.dataset import my_dataset
 from utils import DEVICE, load_model, adjust_alpha
@@ -239,10 +239,6 @@ class HPSelection():
             t_feature = self.feature_model(target)
             t_out = self.label_model(t_feature)
 
-            # 查看变量所在设备
-            # print(f's_feature: {s_feature.device}')   # cuda
-            # print(f'alpha: {alpha.device}')
-
             # domain classifier
             s_domain_out = self.domain_model(s_feature, alpha=alpha)
             t_domain_out = self.domain_model(t_feature, alpha=alpha)
@@ -314,7 +310,7 @@ class HPSelection():
             callback_save_path = os.path.join(self.opts.hp_dir, comb_name)
             if not os.path.exists(callback_save_path):
                 os.makedirs(callback_save_path)
-            self.early_stopping = EarlyStopping(callback_path=callback_save_path, patience=5)
+            self.early_stopping = EarlyStopping(callback_path=callback_save_path, patience=5, top_k=1)
             print(f'comb_name:{comb_name}, cur_txt_path:{cur_txt_path}, callback_save_dir:{callback_save_path}')
 
             if optimizer_type == 'Adam':
