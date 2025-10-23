@@ -12,7 +12,8 @@ class Feature_extractor(nn.Module):
         model = efficientnet_b0(weights=None, num_classes=2)
         self.encoder = nn.Sequential(
             model.features,
-            nn.AdaptiveAvgPool2d(output_size=1)
+            model.avgpool,
+            nn.Flatten(),     # 这里添加flattern是为了使features传入classifier不尺寸错误
         )
 
         for m in self.modules():
@@ -21,20 +22,16 @@ class Feature_extractor(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        x = torch.flatten(x, 1)
-        x = F.relu(x)
+        # x = torch.flatten(x, 1)
+        # x = F.relu(x)
         return x
 
 
 class Label_classifier(nn.Module):
     def __init__(self):
         super(Label_classifier, self).__init__()
-
-        self.label_classifier = nn.Sequential(
-            nn.Linear(1280, 1280),
-            nn.ReLU(),
-            nn.Linear(1280, 2)
-        )
+        model = efficientnet_b0(weights=None, num_classes=2)
+        self.label_classifier = model.classifier
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -50,11 +47,11 @@ class Domain_Classifier(nn.Module):
         super(Domain_Classifier, self).__init__()
 
         self.domain_classifier = nn.Sequential(
-            nn.Linear(1280, 1280),
-            nn.LeakyReLU(0.2),
-            nn.Linear(1280, 500),
-            nn.LeakyReLU(0.2),
-            nn.Linear(500, 1),
+            nn.Linear(1280, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 2),
         )
 
         for m in self.modules():
@@ -62,25 +59,46 @@ class Domain_Classifier(nn.Module):
                 nn.init.kaiming_normal_(m.weight)
 
     def forward(self, x, alpha=-1):
+        # GRL是DANN的核心点之一，不能漏掉
         x = GradReverse.apply(x, alpha)
         x = self.domain_classifier(x)
-        x = torch.sigmoid(x)
+        # x = torch.sigmoid(x)      # 暂时不加这一层，并将loss改为交叉熵损失
         return x
 
 
 
 if __name__ == '__main__':
     rand_input = torch.ones(size=(6, 3, 224, 224))
-    model = Feature_extractor()
-    label_cls = Label_classifier()
-    domain_cls = Domain_Classifier()
+    # model = Feature_extractor()
+    # label_cls = Label_classifier()
+    # domain_cls = Domain_Classifier()
+    #
+    # features = model(rand_input)
+    # label_out = label_cls(features)
+    # domain_out = domain_cls(features, 0.05)
+    #
+    # print('label_out', label_out.shape)
+    # print('domain_out', domain_out.shape)
 
-    features = model(rand_input)
-    label_out = label_cls(features)
-    domain_out = domain_cls(features, 0.05)
+    # ---
+    from torchsummary import summary
 
-    print('label_out', label_out.shape)
-    print('domain_out', domain_out.shape)
+    model = efficientnet_b0(weights=None, num_classes=2)
+    # summary(model, (3, 224, 224))
+
+    m1 = Feature_extractor()
+    m2 = Label_classifier()
+    m3 = Domain_Classifier()
+
+    print(m3)
+
+    # features = m1(rand_input)
+    # label = m2(features)
+    # domain = m3(features)
+
+    # print(features.shape)
+    # print(label.shape)
+    # print(domain.shape)
 
 
 

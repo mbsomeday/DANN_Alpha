@@ -18,8 +18,9 @@ def get_args():
     parser.add_argument('--hp_dir', type=str, default=r'D:\my_phd\Results\HP_Search\HPcomb')
 
     # test
-    parser.add_argument('--weight_dir', type=str, default=None)
-    parser.add_argument('--test_txt', type=str, default=r'D:\my_phd\Results\res.txt', help='txt file that records test results')
+    parser.add_argument('--weight_dir', type=str, default=r'D:\my_phd\Results\DANN_HP_Search\HPComb\48_0.001_Adam_COS\4_10.94562')
+    parser.add_argument('--test_ds_list', nargs='+', default=['D1'])
+    parser.add_argument('--test_txt', type=str, default=r'D:\my_phd\on_git\DANN_Alpha\Results\test_res.txt', help='txt file that records test results')
 
     args = parser.parse_args()
 
@@ -28,7 +29,7 @@ def get_args():
 
 args = get_args()
 hp = HPSelection(args)
-
+args.isTrain = False
 if args.isTrain:
     print(f'Current mode: Train')
     hp.hp_search()

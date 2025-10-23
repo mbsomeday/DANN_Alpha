@@ -22,6 +22,8 @@ class HPSelection():
     def __init__(self, opts):
         super().__init__()
 
+        self.drop_last = False
+
         hp_dict = {
             'batch_size': [48, 64],
             'base_lr': [1e-3, 5e-4],
@@ -41,30 +43,32 @@ class HPSelection():
         self.source = ['D1']
         self.target = ['D2']
 
-        self.warmup_epochs = 3
-        self.min_epochs = 10
-        self.max_epochs = 50
-        self.mini_train_num = 1000
-        self.mini_val_num = 1000
-        self.mini_test_num = 1000
-        self.patience = 5
+        # self.warmup_epochs = 3
+        # self.min_epochs = 10
+        # self.max_epochs = 50
+        # self.mini_train_num = 1000
+        # self.mini_val_num = 1000
+        # self.mini_test_num = 1000
+        # self.patience = 5
 
-        # self.min_epochs = 2
-        # self.max_epochs = 5
-        # self.mini_train_num = 10
-        # self.mini_val_num = 10
-        # self.mini_test_num = 10
+        # 只在测试的时候用
+        self.warmup_epochs = 3
+        self.min_epochs = 2
+        self.max_epochs = 5
+        self.mini_train_num = 10
+        self.mini_val_num = 10
+        self.mini_test_num = 10
 
         self.best_weight_dir = None
 
         # 加载DANN模型
-        self.enc = Feature_extractor().to(DEVICE)
-        self.clf = Label_classifier().to(DEVICE)
-        self.fd = Domain_Classifier().to(DEVICE)
+        self.feature_model = Feature_extractor().to(DEVICE)
+        self.label_model = Label_classifier().to(DEVICE)
+        self.domain_model = Domain_Classifier().to(DEVICE)
 
         # 损失函数
         self.ce = nn.CrossEntropyLoss()
-        self.bce = nn.BCELoss()
+        # self.bce = nn.BCELoss()
 
         if self.opts.isTrain:
             self.train_setup()
@@ -90,16 +94,17 @@ class HPSelection():
         print(f'Mini source train num: {len(self.s_mini_trainset)}\nMini source val num:{len(self.s_mini_valset)}')
         print(f'Mini target train num: {len(self.t_mini_trainset)}\nMini target val num:{len(self.t_mini_valset)}')
 
-        self.total_iters = 0
-        self.min_len = 0
-
         self.txt_dir = os.path.join(self.opts.hp_dir, 'hp_txt')
         os.makedirs(self.txt_dir, exist_ok=True)
 
+        # 后续需要重新赋值的变量
+        self.total_iters = 0
+        self.min_len = 0
+
     def val_on_epoch_end(self, data_loader, epoch=None):
 
-        self.enc.eval()
-        self.clf.eval()
+        self.feature_model.eval()
+        self.label_model.eval()
 
         val_info = {
             'loss': 0.0
@@ -107,13 +112,13 @@ class HPSelection():
         y_true = []
         y_pred = []
 
-        epoch_msg = str(epoch) if epoch is not None else ''
+        msg = f'Epoch {epoch} val' if epoch is not None else 'Test'
 
         with torch.no_grad():
-            for batch_idx, data_dict in enumerate(tqdm(data_loader, desc=f'Epoch {epoch_msg} val')):
+            for batch_idx, data_dict in enumerate(tqdm(data_loader, desc=msg)):
                 images, labels = data_dict['image'].to(DEVICE), data_dict['ped_label'].to(DEVICE)
 
-                logits = self.clf(self.enc(images))
+                logits = self.label_model(self.feature_model(images))
                 preds = torch.argmax(logits, dim=1)
                 loss_value = self.ce(logits, labels)
                 val_info['loss'] += loss_value.item()
@@ -130,6 +135,9 @@ class HPSelection():
         return val_info
 
     def decomp_cm(self, cm):
+        '''
+            对混淆矩阵进行分解
+        '''
         tn, fp, fn, tp = cm.ravel()
         return f'{tn}, {fp}, {fn}, {tp}'
 
@@ -138,47 +146,55 @@ class HPSelection():
             最终在test set上进行检验
         '''
 
-        # source test set
-        s_testset = my_dataset(ds_name_list=self.source, path_key='Stage6_org', txt_name='test.txt')
-        self.s_mini_testset, _ = random_split(s_testset, [self.mini_test_num, len(s_testset) - self.mini_test_num])
-        self.s_mini_testloader = DataLoader(self.s_mini_testset, batch_size=128, shuffle=False)
+        # load data
+        test_dataset = my_dataset(ds_name_list=self.opts.test_ds_list, path_key='Stage6_org', txt_name='test.txt')
+        mini_testset, _ = random_split(test_dataset, [self.mini_test_num, len(test_dataset) - self.mini_test_num])
+        mini_testloader = DataLoader(mini_testset, batch_size=128, shuffle=False)
 
-        # target test set
-        t_testset = my_dataset(ds_name_list=self.target, path_key='Stage6_org', txt_name='test.txt')
-        self.t_mini_testset, _ = random_split(t_testset, [self.mini_test_num, len(t_testset) - self.mini_test_num])
-        self.t_mini_testloader = DataLoader(self.t_mini_testset, batch_size=128, shuffle=False)
-
+        # load model
         for item in os.listdir(self.opts.weight_dir):
             weight_path = os.path.join(self.opts.weight_dir, item)
             print(f'weight_path: {weight_path}')
-            state_dict = torch.load(weight_path)
+            state_dict = torch.load(weight_path, map_location=DEVICE)
             if item.split('_')[1] == 'enc':
-                self.enc.load_state_dict(state_dict)
+                self.feature_model.load_state_dict(state_dict)
             elif item.split('_')[1] == 'clf':
-                self.clf.load_state_dict(state_dict)
+                self.label_model.load_state_dict(state_dict)
             elif item.split('_')[1] == 'fd':
-                self.fd.load_state_dict(state_dict)
+                self.domain_model.load_state_dict(state_dict)
 
-        print(f'Best Model on source test set:')
-        s_test_info = self.val_on_epoch_end(data_loader=self.s_mini_testloader)
-
-        print(f'Best Model on target test set:')
-        t_test_info = self.val_on_epoch_end(data_loader=self.t_mini_testloader)
+        test_info = self.val_on_epoch_end(data_loader=mini_testloader)
 
         with open(self.opts.test_txt, 'a') as f:
-            msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f}, target test ba: {t_test_info["balanced_accuracy"]:.4f}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
+            msg = f'model_weights: {self.opts.weight_dir}\nds_name: {self.opts.test_ds_list[0]}\nTest loss: {test_info["loss"]:.4f}\nTest balanced acc: {test_info["balanced_accuracy"]:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_info["cm"])}'
+            # msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f}, target test ba: {t_test_info["balanced_accuracy"]:.4f}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
             print(msg)
             f.write(msg)
 
+        # # source test set
+        # s_testset = my_dataset(ds_name_list=self.source, path_key='Stage6_org', txt_name='test.txt')
+        # self.s_mini_testset, _ = random_split(s_testset, [self.mini_test_num, len(s_testset) - self.mini_test_num])
+        # self.s_mini_testloader = DataLoader(self.s_mini_testset, batch_size=128, shuffle=False)
+        #
+        # # target test set
+        # t_testset = my_dataset(ds_name_list=self.target, path_key='Stage6_org', txt_name='test.txt')
+        # self.t_mini_testset, _ = random_split(t_testset, [self.mini_test_num, len(t_testset) - self.mini_test_num])
+        # self.t_mini_testloader = DataLoader(self.t_mini_testset, batch_size=128, shuffle=False)
+
+        # print(f'Best Model on source test set:')
+        # s_test_info = self.val_on_epoch_end(data_loader=self.s_mini_testloader)
+        #
+        # print(f'Best Model on target test set:')
+        # t_test_info = self.val_on_epoch_end(data_loader=self.t_mini_testloader)
 
     def train_one_epoch(self, epoch):
         train_info = {
             'loss': 0.0,
         }
 
-        self.clf.train()
-        self.enc.train()
-        self.fd.train()
+        self.label_model.train()
+        self.feature_model.train()
+        self.domain_model.train()
 
         y_true = []
         y_pred = []
@@ -186,7 +202,7 @@ class HPSelection():
         for batch_idx, (source_dict, target_dict) in tqdm(
                 enumerate(zip(self.s_mini_trainloader, self.t_mini_trainloader)),
                 total=len(self.s_mini_trainloader), desc=f'Epoch {epoch} train'
-                ):
+        ):
             # 调节domain classifier的alpha
             self.total_iters += 1
             alpha = adjust_alpha(batch_idx, epoch, self.min_len, self.max_epochs)
@@ -195,24 +211,39 @@ class HPSelection():
             source, s_labels = source_dict['image'].to(DEVICE), source_dict['ped_label'].to(DEVICE)
             target, _ = target_dict['image'].to(DEVICE), target_dict['ped_label'].to(DEVICE)
 
-            # 训练开始
-            s_deep = self.enc(source)
-            s_out = self.clf(s_deep)
+            # label classifier
+            s_feature = self.feature_model(source)
+            s_out = self.label_model(s_feature)
             s_pred = torch.argmax(s_out, 1)
 
-            t_deep = self.enc(target)
-            t_out = self.clf(t_deep)
+            t_feature = self.feature_model(target)
+            t_out = self.label_model(t_feature)
 
-            s_fd_out = self.fd(s_deep, alpha=alpha)
-            t_fd_out = self.fd(t_deep, alpha=alpha)
+            # domain classifier
+            s_domain_out = self.domain_model(s_feature, alpha=alpha)
+            t_domain_out = self.domain_model(t_feature, alpha=alpha)
 
-            s_domain_err = self.bce(s_fd_out, self.real_label)
-            t_domain_err = self.bce(t_fd_out, self.fake_label)
-            disc_loss = s_domain_err + t_domain_err
+            # 两个classifier都用交叉熵损失
+            real_label = torch.ones(size=(source.shape[0],), dtype=torch.long)
+            fake_label = torch.zeros(size=(target.shape[0],), dtype=torch.long)
+            s_domain_err = self.ce(s_domain_out, real_label)
+            t_domain_err = self.ce(t_domain_out, fake_label)
+            domain_loss = s_domain_err + t_domain_err
+
+            # # 训练开始
+            # s_deep = self.feature_model(source)
+            # s_out = self.label_model(s_deep)
+            # s_pred = torch.argmax(s_out, 1)
+            # t_deep = self.feature_model(target)
+            # t_out = self.label_model(t_deep)
+            # s_fd_out = self.domain_model(s_deep, alpha=alpha)
+            # t_fd_out = self.domain_model(t_deep, alpha=alpha)
+            # s_domain_err = self.bce(s_fd_out, self.real_label)
+            # t_domain_err = self.bce(t_fd_out, self.fake_label)
+            # disc_loss = s_domain_err + t_domain_err
 
             s_clf_loss = self.ce(s_out, s_labels)
-
-            loss_value = s_clf_loss + disc_loss
+            loss_value = s_clf_loss + domain_loss
 
             self.optimizer.zero_grad()
             loss_value.backward()
@@ -232,16 +263,14 @@ class HPSelection():
             self.batch_size, self.base_lr, optimizer_type, scheduler_type = comb_info
 
             # data loader
-            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True,
-                                                 drop_last=True)
-            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False, drop_last=True)
-            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True,
-                                                 drop_last=True)
-            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False, drop_last=True)
+            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
+            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False, drop_last=self.drop_last)
+            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
+            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False, drop_last=self.drop_last)
 
-            # 用于 domain classifier训练的label
-            self.fake_label = torch.FloatTensor(self.batch_size, 1).fill_(0).to(DEVICE)
-            self.real_label = torch.FloatTensor(self.batch_size, 1).fill_(1).to(DEVICE)
+            # # 用于 domain classifier训练的label
+            # self.fake_label = torch.FloatTensor(self.batch_size, 1).fill_(0).to(DEVICE)
+            # self.real_label = torch.FloatTensor(self.batch_size, 1).fill_(1).to(DEVICE)
 
             # get combination name
             comb = [str(self.batch_size), str(self.base_lr), optimizer_type, scheduler_type]
@@ -261,11 +290,11 @@ class HPSelection():
 
             if optimizer_type == 'Adam':
                 self.optimizer = Adam(
-                    params=list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()),
+                    params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()),
                     lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
             elif optimizer_type == 'SGD':
                 self.optimizer = SGD(
-                    list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()),
+                    list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()),
                     lr=self.base_lr, momentum=0.9, weight_decay=0.0001)
 
             if scheduler_type == 'COS':
@@ -274,6 +303,7 @@ class HPSelection():
             elif scheduler_type == 'EXP':
                 self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.95)
 
+            # 每个combination需要重置这两个值
             s_iter_per_epoch = len(self.s_mini_trainloader)
             t_iter_per_epoch = len(self.t_mini_trainloader)
             self.min_len = min(s_iter_per_epoch, t_iter_per_epoch)
@@ -282,7 +312,7 @@ class HPSelection():
             for EPOCH in range(self.max_epochs):
                 train_info = self.train_one_epoch(EPOCH + 1)
                 val_info = self.val_on_epoch_end(self.t_mini_valloader, epoch=(EPOCH + 1))
-                self.early_stopping(EPOCH + 1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_info)
+                self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
 
                 # lr schedule
                 if EPOCH <= self.warmup_epochs:
@@ -290,7 +320,7 @@ class HPSelection():
                 else:
                     self.scheduler.step()
 
-                self.write_to_txt(EPOCH, txt_path=cur_txt_path, train_info=train_info, val_info=val_info)
+                self.write_to_txt(EPOCH+1, txt_path=cur_txt_path, train_info=train_info, val_info=val_info)
 
                 # 在低于min train epoch时，每次重置early stop的参数
                 if (EPOCH + 1) <= self.min_epochs:

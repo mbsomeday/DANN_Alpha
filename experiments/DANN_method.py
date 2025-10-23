@@ -18,23 +18,29 @@ class DANN_Trainer(object):
         self.args = args
         self.print_args()
 
+        self.drop_last = False
+
         # 加载data
         self.s_train_dataset = my_dataset(ds_name_list=args.source, path_key='Stage6_org', txt_name='augmentation_train.txt')
-        self.s_train_loader = DataLoader(self.s_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=True)
+        self.s_train_loader = DataLoader(self.s_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=self.drop_last)
 
         self.s_val_dataset = my_dataset(ds_name_list=args.source, path_key='Stage6_org', txt_name='val.txt')
-        self.s_val_loader = DataLoader(self.s_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=True)
+        self.s_val_loader = DataLoader(self.s_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=self.drop_last)
 
         self.t_train_dataset = my_dataset(ds_name_list=args.target, path_key='Stage6_org', txt_name='augmentation_train.txt')
-        self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=True)
+        self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=self.drop_last)
 
         self.t_val_dataset = my_dataset(ds_name_list=args.target, path_key='Stage6_org', txt_name='val.txt')
-        self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=True)
+        self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=self.drop_last)
 
         # 加载模型
-        self.enc = Feature_extractor().to(DEVICE)
-        self.clf = Label_classifier().to(DEVICE)
-        self.fd = Domain_Classifier().to(DEVICE)
+        self.feature_model = Feature_extractor().to(DEVICE)
+        self.label_model = Label_classifier().to(DEVICE)
+        self.domain_model = Domain_Classifier().to(DEVICE)
+
+        # self.enc = Feature_extractor().to(DEVICE)
+        # self.clf = Label_classifier().to(DEVICE)
+        # self.fd = Domain_Classifier().to(DEVICE)
 
         # 损失函数
         self.ce = nn.CrossEntropyLoss()
@@ -46,9 +52,9 @@ class DANN_Trainer(object):
         self.best_ba = 0    # balanced acc
         self.time_taken = None
 
-        # 用于 domain classifier训练的label
-        self.fake_label = torch.FloatTensor(self.args.batch_size, 1).fill_(0).to(DEVICE)
-        self.real_label = torch.FloatTensor(self.args.batch_size, 1).fill_(1).to(DEVICE)
+        # # 用于 domain classifier训练的label，cbe作为损失函数时
+        # self.fake_label = torch.FloatTensor(self.args.batch_size, 1).fill_(0).to(DEVICE)
+        # self.real_label = torch.FloatTensor(self.args.batch_size, 1).fill_(1).to(DEVICE)
 
         self.best_weight_dir = None
 
@@ -73,8 +79,8 @@ class DANN_Trainer(object):
                 f.write(msg + '\n')
 
     def val_on_epoch_end(self, data_loader):
-        self.enc.eval()
-        self.clf.eval()
+        self.feature_model.eval()
+        self.label_model.eval()
 
         y_true = []
         y_pred = []
@@ -84,7 +90,7 @@ class DANN_Trainer(object):
             for batch_idx, data_dict in enumerate(tqdm(data_loader)):
                 images, labels = data_dict['image'].to(DEVICE), data_dict['ped_label'].to(DEVICE)
 
-                logits = self.clf(self.enc(images))
+                logits = self.label_model(self.feature_model(images))
                 preds = torch.argmax(logits, dim=1)
                 loss_value = self.ce(logits, labels)
                 val_loss += loss_value.item()
@@ -104,6 +110,7 @@ class DANN_Trainer(object):
         }
         return DotDict(val_epoch_info)
 
+    # todo test 函数要大改
     def test(self):
         self.s_test_dataset = my_dataset(ds_name_list=self.args.source, path_key='Stage6_org', txt_name='test.txt')
         self.s_test_loader = DataLoader(self.s_test_dataset, batch_size=self.args.batch_size, shuffle=False)
@@ -116,11 +123,11 @@ class DANN_Trainer(object):
             print(f'weight_path: {weight_path}')
             state_dict = torch.load(weight_path)
             if item.split('_')[1] == 'enc':
-                self.enc.load_state_dict(state_dict)
+                self.feature_model.load_state_dict(state_dict)
             elif item.split('_')[1] == 'clf':
-                self.clf.load_state_dict(state_dict)
+                self.label_model.load_state_dict(state_dict)
             elif item.split('_')[1] == 'fd':
-                self.fd.load_state_dict(state_dict)
+                self.domain_model.load_state_dict(state_dict)
 
 
         # print(f'Best Model on source train set:')
@@ -145,12 +152,13 @@ class DANN_Trainer(object):
         print("Target iters per epoch: %d" % (t_iter_per_epoch))
         print("iters per epoch: %d" % (min(s_iter_per_epoch, t_iter_per_epoch)))
 
-        self.optimizer = optim.Adam(list(self.enc.parameters()) + list(self.clf.parameters()) + list(self.fd.parameters()), self.args.lr, betas=(0.5, 0.999), weight_decay=self.args.weight_decay)
+        # todo：这里看一下用list还是别的写法
+        self.optimizer = optim.Adam(list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), self.args.lr, betas=(0.9, 0.999), weight_decay=self.args.weight_decay)
 
         for EPOCH in range(self.args.epochs):
-            self.clf.train()
-            self.enc.train()
-            self.fd.train()
+            self.label_model.train()
+            self.feature_model.train()
+            self.domain_model.train()
 
             for batch_idx, (source_dict, target_dict) in enumerate(zip(self.s_train_loader, self.t_train_loader)):
                 # 调节domain classifier的alpha
@@ -161,37 +169,55 @@ class DANN_Trainer(object):
                 source, s_labels = source_dict['image'].to(DEVICE), source_dict['ped_label'].to(DEVICE)
                 target, _ = target_dict['image'].to(DEVICE), target_dict['ped_label'].to(DEVICE)
 
-                s_deep = self.enc(source)
-                s_out = self.clf(s_deep)
+                # label classifier
+                s_feature = self.feature_model(source)
+                s_out = self.label_model(s_feature)
 
-                t_deep = self.enc(target)
-                t_out = self.clf(t_deep)
+                t_feature = self.feature_model(target)
+                t_out = self.label_model(t_feature)
 
-                s_fd_out = self.fd(s_deep, alpha=alpha)
-                t_fd_out = self.fd(t_deep, alpha=alpha)
+                # domain classifier
+                s_domain_out = self.domain_model(s_feature, alpha=alpha)
+                t_domain_out = self.domain_model(t_feature, alpha=alpha)
 
-                s_domain_err = self.bce(s_fd_out, self.real_label)
-                t_domain_err = self.bce(t_fd_out, self.fake_label)
-                disc_loss = s_domain_err + t_domain_err
+                # 两个classifier都用交叉熵损失
+                real_label = torch.ones(size=(source.shape[0], ), dtype=torch.long)
+                fake_label = torch.zeros(size=(target.shape[0], ), dtype=torch.long)
+                s_domain_err = self.ce(s_domain_out, real_label)
+                t_domain_err = self.ce(t_domain_out, fake_label)
 
-                s_clf_loss = self.ce(s_out, s_labels)
+                # s_deep = self.feature_model(source)
+                # s_out = self.label_model(s_deep)
+                # t_deep = self.feature_model(target)
+                # t_out = self.label_model(t_deep)
+                # s_fd_out = self.domain_model(s_deep, alpha=alpha)
+                # t_fd_out = self.domain_model(t_deep, alpha=alpha)
+                # s_domain_err = self.bce(s_fd_out, self.real_label)
+                # t_domain_err = self.bce(t_fd_out, self.fake_label)
 
-                loss = s_clf_loss + disc_loss
+                domain_loss = s_domain_err + t_domain_err
+                s_label_loss = self.ce(s_out, s_labels)
+                loss = s_label_loss + domain_loss
 
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
 
-                if batch_idx % 50 == 0 or batch_idx == (min_len - 1):
-                    print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
-                          % (EPOCH + 1, self.args.epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
+                # if batch_idx % 50 == 0 or batch_idx == (min_len - 1):
+                #     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
+                #           % (EPOCH + 1, self.args.epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
 
-            if (EPOCH + 1) <= self.args.min_train_epoch:
-                if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
-                    _ = self.val_on_epoch_end(self.t_val_loader)
-            else:
-                val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
-                self.early_stopping(EPOCH+1, enc=self.enc, clf=self.clf, fd=self.fd, val_epoch_info=val_epoch_info)
+            val_info = self.val_on_epoch_end(self.t_val_loader)
+
+            if (EPOCH + 1) > self.args.min_train_epoch:
+                self.early_stopping(EPOCH+1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
+
+            # if (EPOCH + 1) <= self.args.min_train_epoch:
+            #     if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
+            #         _ = self.val_on_epoch_end(self.t_val_loader)
+            # else:
+            #     val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
+            #     self.early_stopping(EPOCH+1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_epoch_info)
 
             self.best_weight_dir = self.early_stopping.best_weight_dir
 
