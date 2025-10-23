@@ -263,10 +263,14 @@ class HPSelection():
             self.batch_size, self.base_lr, optimizer_type, scheduler_type = comb_info
 
             # data loader
-            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
-            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False, drop_last=self.drop_last)
-            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
-            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False, drop_last=self.drop_last)
+            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True,
+                                                 drop_last=self.drop_last)
+            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False,
+                                               drop_last=self.drop_last)
+            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True,
+                                                 drop_last=self.drop_last)
+            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False,
+                                               drop_last=self.drop_last)
 
             # # 用于 domain classifier训练的label
             # self.fake_label = torch.FloatTensor(self.batch_size, 1).fill_(0).to(DEVICE)
@@ -290,11 +294,13 @@ class HPSelection():
 
             if optimizer_type == 'Adam':
                 self.optimizer = Adam(
-                    params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()),
+                    params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(
+                        self.domain_model.parameters()),
                     lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
             elif optimizer_type == 'SGD':
                 self.optimizer = SGD(
-                    list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()),
+                    list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(
+                        self.domain_model.parameters()),
                     lr=self.base_lr, momentum=0.9, weight_decay=0.0001)
 
             if scheduler_type == 'COS':
@@ -312,7 +318,8 @@ class HPSelection():
             for EPOCH in range(self.max_epochs):
                 train_info = self.train_one_epoch(EPOCH + 1)
                 val_info = self.val_on_epoch_end(self.t_mini_valloader, epoch=(EPOCH + 1))
-                self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
+                self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model,
+                                    val_epoch_info=val_info)
 
                 # lr schedule
                 if EPOCH <= self.warmup_epochs:
@@ -320,7 +327,7 @@ class HPSelection():
                 else:
                     self.scheduler.step()
 
-                self.write_to_txt(EPOCH+1, txt_path=cur_txt_path, train_info=train_info, val_info=val_info)
+                self.write_to_txt(EPOCH + 1, txt_path=cur_txt_path, train_info=train_info, val_info=val_info)
 
                 # 在低于min train epoch时，每次重置early stop的参数
                 if (EPOCH + 1) <= self.min_epochs:
