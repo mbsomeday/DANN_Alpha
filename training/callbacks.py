@@ -21,7 +21,6 @@ class EarlyStopping():
         self.model_save_dir = callback_path
         self.top_k = top_k
 
-        self.best_save_dir = None
         self.save_prefix = callback_path.split(os.sep)[-1]
         self.cur_epoch = cur_epoch
         self.monitored_metric = monitored_metric
@@ -119,9 +118,9 @@ class EarlyStopping():
         self.best_weight_dir = os.path.join(ckpt_dir, f'{self.cur_epoch}_{metrics[1]:.5f}')
         if not os.path.exists(self.best_weight_dir):
             os.makedirs(self.best_weight_dir)
-        torch.save(enc.state_dict(), os.path.join(self.best_weight_dir, f'dann_enc_{self.cur_epoch:02d}.pt'))
-        torch.save(clf.state_dict(), os.path.join(self.best_weight_dir, f'dann_clf_{self.cur_epoch:02d}.pt'))
-        torch.save(fd.state_dict(), os.path.join(self.best_weight_dir, f'dann_disc_{self.cur_epoch:02d}.pt'))
+        torch.save(enc.state_dict(), os.path.join(self.best_weight_dir, f'dann_feature_{self.cur_epoch:02d}.pt'))
+        torch.save(clf.state_dict(), os.path.join(self.best_weight_dir, f'dann_label_{self.cur_epoch:02d}.pt'))
+        torch.save(fd.state_dict(), os.path.join(self.best_weight_dir, f'dann_domain_{self.cur_epoch:02d}.pt'))
 
 
 

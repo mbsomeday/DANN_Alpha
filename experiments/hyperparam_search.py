@@ -43,23 +43,21 @@ class HPSelection():
         self.source = ['D1']
         self.target = ['D2']
 
-        # self.warmup_epochs = 3
-        # self.min_epochs = 10
-        # self.max_epochs = 50
-        # self.mini_train_num = 1000
-        # self.mini_val_num = 1000
-        # self.mini_test_num = 1000
-        # self.patience = 5
-
-        # 只在测试的时候用
         self.warmup_epochs = 3
-        self.min_epochs = 2
-        self.max_epochs = 5
-        self.mini_train_num = 10
-        self.mini_val_num = 10
-        self.mini_test_num = 10
+        self.min_epochs = 10
+        self.max_epochs = 50
+        self.mini_train_num = 1000
+        self.mini_val_num = 1000
+        self.mini_test_num = 1000
+        self.patience = 5
 
-        self.best_weight_dir = None
+        # # 只在测试的时候用
+        # self.warmup_epochs = 3
+        # self.min_epochs = 2
+        # self.max_epochs = 5
+        # self.mini_train_num = 10
+        # self.mini_val_num = 10
+        # self.mini_test_num = 10
 
         # 加载DANN模型
         self.feature_model = Feature_extractor().to(DEVICE)
@@ -72,7 +70,7 @@ class HPSelection():
 
         if self.opts.isTrain:
             self.train_setup()
-        print('共有的超参数组合数：', len(self.all_combinations))
+            print(f'当前为训练模式\n共有的超参数组合数: {len(self.all_combinations)}')
 
     def train_setup(self):
         # source train
@@ -129,9 +127,6 @@ class HPSelection():
             val_bc = balanced_accuracy_score(y_true, y_pred)
             val_info['balanced_accuracy'] = val_bc
 
-            val_cm = confusion_matrix(y_true, y_pred)
-            val_info['cm'] = val_cm
-
         return val_info
 
     def decomp_cm(self, cm):
@@ -146,7 +141,7 @@ class HPSelection():
             最终在test set上进行检验
         '''
 
-        # load data
+        # load test data
         test_dataset = my_dataset(ds_name_list=self.opts.test_ds_list, path_key='Stage6_org', txt_name='test.txt')
         mini_testset, _ = random_split(test_dataset, [self.mini_test_num, len(test_dataset) - self.mini_test_num])
         mini_testloader = DataLoader(mini_testset, batch_size=128, shuffle=False)
@@ -156,20 +151,45 @@ class HPSelection():
             weight_path = os.path.join(self.opts.weight_dir, item)
             print(f'weight_path: {weight_path}')
             state_dict = torch.load(weight_path, map_location=DEVICE)
-            if item.split('_')[1] == 'enc':
+            if item.split('_')[1] == 'feature':
                 self.feature_model.load_state_dict(state_dict)
-            elif item.split('_')[1] == 'clf':
+            elif item.split('_')[1] == 'label':
                 self.label_model.load_state_dict(state_dict)
-            elif item.split('_')[1] == 'fd':
+            elif item.split('_')[1] == 'domain':
                 self.domain_model.load_state_dict(state_dict)
 
-        test_info = self.val_on_epoch_end(data_loader=mini_testloader)
+        # 开始测试
+        y_true = []
+        y_pred = []
+        test_loss = 0.0
 
-        with open(self.opts.test_txt, 'a') as f:
-            msg = f'model_weights: {self.opts.weight_dir}\nds_name: {self.opts.test_ds_list[0]}\nTest loss: {test_info["loss"]:.4f}\nTest balanced acc: {test_info["balanced_accuracy"]:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_info["cm"])}'
-            # msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f}, target test ba: {t_test_info["balanced_accuracy"]:.4f}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
-            print(msg)
-            f.write(msg)
+        with torch.no_grad():
+            for batch_idx, data_dict in enumerate(tqdm(mini_testloader, desc='Test')):
+                images, labels = data_dict['image'].to(DEVICE), data_dict['ped_label'].to(DEVICE)
+
+                logits = self.label_model(self.feature_model(images))
+                preds = torch.argmax(logits, dim=1)
+                loss_value = self.ce(logits, labels)
+                test_loss += loss_value.item()
+
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
+
+            test_ba = balanced_accuracy_score(y_true, y_pred)
+            test_cm = confusion_matrix(y_true, y_pred)
+
+            with open(self.opts.test_txt, 'a') as f:
+                msg = f'model_weights: {self.opts.weight_dir}\nds_name: {self.opts.test_ds_list[0]}\nTest loss: {test_loss:.4f}\nTest balanced acc: {test_ba:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_cm)}'
+                print(msg)
+                f.write(msg)
+
+
+        # test_info = self.val_on_epoch_end(data_loader=mini_testloader)
+        # with open(self.opts.test_txt, 'a') as f:
+        #     msg = f'model_weights: {self.opts.weight_dir}\nds_name: {self.opts.test_ds_list[0]}\nTest loss: {test_info["loss"]:.4f}\nTest balanced acc: {test_info["balanced_accuracy"]:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_info["cm"])}'
+        #     # msg = f'model_weights: {self.opts.weight_dir}\nsource: {self.source}, target: {self.target}\nSource test loss: {s_test_info["loss"]:.4f}, target test loss: {t_test_info["loss"]:.4f}\nSource test ba: {s_test_info["balanced_accuracy"]:.4f}, target test ba: {t_test_info["balanced_accuracy"]:.4f}\nSource tn, fp, fn, tp: {self.decomp_cm(s_test_info["cm"])}\nTarget tn, fp, fn, tp: {self.decomp_cm(t_test_info["cm"])}'
+        #     print(msg)
+        #     f.write(msg)
 
         # # source test set
         # s_testset = my_dataset(ds_name_list=self.source, path_key='Stage6_org', txt_name='test.txt')
@@ -278,8 +298,9 @@ class HPSelection():
 
             # get combination name
             comb = [str(self.batch_size), str(self.base_lr), optimizer_type, scheduler_type]
-            comb_name = '_'.join(comb)
-            cur_txt_path = os.path.join(self.txt_dir, str(comb_idx + 1) + '.txt')
+            comb_name = '_'.join(comb) + '_'
+
+            cur_txt_path = os.path.join(self.txt_dir, comb_name.replace('.', 'dot') + '.txt')
             with open(cur_txt_path, 'a') as f:
                 f.write('Combination: ' + comb_name + '\n')
 
@@ -304,8 +325,7 @@ class HPSelection():
                     lr=self.base_lr, momentum=0.9, weight_decay=0.0001)
 
             if scheduler_type == 'COS':
-                self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
-                                                                            T_max=self.max_epochs - self.warmup_epochs)
+                self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_epochs - self.warmup_epochs)
             elif scheduler_type == 'EXP':
                 self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.95)
 
@@ -318,8 +338,6 @@ class HPSelection():
             for EPOCH in range(self.max_epochs):
                 train_info = self.train_one_epoch(EPOCH + 1)
                 val_info = self.val_on_epoch_end(self.t_mini_valloader, epoch=(EPOCH + 1))
-                self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model,
-                                    val_epoch_info=val_info)
 
                 # lr schedule
                 if EPOCH <= self.warmup_epochs:
@@ -334,7 +352,7 @@ class HPSelection():
                     self.early_stopping.counter = 0
                     self.early_stopping.early_stop = False
                 else:  # 当训练次数超过最低epoch时，其中early_stop策略
-                    self.best_weight_dir = self.early_stopping.best_weight_dir
+                    self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
                     if self.early_stopping.early_stop:
                         print(f'Early Stopping!')
                         break
@@ -354,7 +372,7 @@ class HPSelection():
         '''
 
         if 'loss' in key:
-            return '{:.6f}'
+            return '{:.4f}'
         if 'accuracy' in key or 'bc' in key:
             return '{:.4f}'
         else:
