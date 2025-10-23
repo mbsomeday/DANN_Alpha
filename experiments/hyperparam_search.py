@@ -381,3 +381,67 @@ class HPSelection():
     def get_print_msg(self, info_dict):
         msg = ', '.join([f"{k}: {self._get_msg_format(k).format(v)}" for k, v in info_dict.items()]) + '\n'
         return msg
+
+
+def analyze_info(txt_path):
+    '''
+    curves:
+        loss - epoch
+        balanced acc - epoch
+    图中标注：收敛时的epoch，最佳balanced acc on val
+    '''
+
+    with open(txt_path, 'r') as f:
+        data = f.read()
+
+        # 先提取combination信息
+        combination_match = re.search(r'^Combination:\s*(.+)$', data, re.MULTILINE)
+        comb_name = combination_match.group(1) if combination_match else "Unknown"
+
+        pattern = r'Epoch: (\d+)[\s\S]*?Train: loss: ([\d.]+), balanced_accuracy: ([\d.]+)[\s\S]*?Val: loss: ([\d.]+), balanced_accuracy: ([\d.]+)'
+        matches = re.findall(pattern, data)
+
+        epochs = [int(match[0]) for match in matches]
+        train_losses = [float(match[1]) for match in matches]
+        train_accs = [float(match[2]) for match in matches]
+        val_losses = [float(match[3]) for match in matches]
+        val_accs = [float(match[4]) for match in matches]
+
+    # 子图1：loss曲线
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, train_losses, 'b-', label='Train Loss', linewidth=2, marker='o')
+    plt.plot(epochs, val_losses, 'r-', label='Val Loss', linewidth=2, marker='s')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation loss')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # 子图2：accuracy曲线
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, train_accs, 'b-', label='Train Balanced Accuracy', linewidth=2, marker='o')
+    plt.plot(epochs, val_accs, 'r-', label='Val Balanced Accuracy', linewidth=2, marker='s')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Training and Validation Accuracy')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    hp_list = comb_name.split('_')
+    title_name = f'Batch size:{hp_list[0]}, lr:{hp_list[1]}, optm:{hp_list[2]}, lr scheduler:{hp_list[3]}'
+    plt.suptitle(title_name, fontsize=14, fontweight='bold')
+
+    plt.tight_layout()
+    plt.show()
+
+
+
+if __name__ == '__main__':
+    txt_path = r'D:\my_phd\on_git\DANN_Alpha\Results\48_0dot001_Adam_COS_.txt'
+    analyze_info(txt_path)
+
+
+
+
+
