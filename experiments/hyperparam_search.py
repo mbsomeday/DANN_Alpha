@@ -225,7 +225,7 @@ class HPSelection():
         ):
             # 调节domain classifier的alpha
             self.total_iters += 1
-            alpha = adjust_alpha(batch_idx, epoch, self.min_len, self.max_epochs).to(DEVICE)
+            alpha = adjust_alpha(batch_idx, epoch, self.min_len, self.max_epochs)
 
             # 加载数据
             source, s_labels = source_dict['image'].to(DEVICE), source_dict['ped_label'].to(DEVICE)
@@ -238,6 +238,10 @@ class HPSelection():
 
             t_feature = self.feature_model(target)
             t_out = self.label_model(t_feature)
+
+            # 查看变量所在设备
+            print(f's_feature: {s_feature.device}')
+            print(f'alpha: {alpha.device}')
 
             # domain classifier
             s_domain_out = self.domain_model(s_feature, alpha=alpha)
