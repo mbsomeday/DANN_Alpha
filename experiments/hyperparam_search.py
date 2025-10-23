@@ -240,16 +240,16 @@ class HPSelection():
             t_out = self.label_model(t_feature)
 
             # 查看变量所在设备
-            print(f's_feature: {s_feature.device}')
-            print(f'alpha: {alpha.device}')
+            # print(f's_feature: {s_feature.device}')   # cuda
+            # print(f'alpha: {alpha.device}')
 
             # domain classifier
             s_domain_out = self.domain_model(s_feature, alpha=alpha)
             t_domain_out = self.domain_model(t_feature, alpha=alpha)
 
             # 两个classifier都用交叉熵损失
-            real_label = torch.ones(size=(source.shape[0],), dtype=torch.long)
-            fake_label = torch.zeros(size=(target.shape[0],), dtype=torch.long)
+            real_label = torch.ones(size=(source.shape[0],), dtype=torch.long).to(DEVICE)
+            fake_label = torch.zeros(size=(target.shape[0],), dtype=torch.long).to(DEVICE)
             s_domain_err = self.ce(s_domain_out, real_label)
             t_domain_err = self.ce(t_domain_out, fake_label)
             domain_loss = s_domain_err + t_domain_err
