@@ -14,15 +14,17 @@ def get_args():
     # train
     parser.add_argument('--monitored_metric', default='loss')
     parser.add_argument('--isTrain', action='store_true')
+    parser.add_argument('--seed', default=13)
 
     # callbacks
-    parser.add_argument('--top_k', default=2)
+    parser.add_argument('--top_k', default=1)
     parser.add_argument('--patience', default=10)
 
     # test
     parser.add_argument('--test_ds_list', nargs='+', default=None)
     parser.add_argument('--weight_dir', type=str, default='./model')
-    parser.add_argument('--seed', default=13)
+    parser.add_argument('--test_txt', type=str, default=None, help='txt file that records test results')
+
 
 
     args = parser.parse_args()
