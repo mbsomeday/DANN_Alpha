@@ -49,8 +49,6 @@ print("Started at " + str(start_time.strftime('%Y-%m-%d %H:%M:%S')))
 
 dann_cls = DANN_Trainer(args)
 dann_cls.train()
-dann_cls.test()
-
 
 end_time = datetime.datetime.now()
 duration = end_time - start_time
