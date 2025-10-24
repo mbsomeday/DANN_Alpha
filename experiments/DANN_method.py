@@ -189,7 +189,9 @@ class DANN_Trainer(object):
             self.feature_model.train()
             self.domain_model.train()
 
-            for batch_idx, (source_dict, target_dict) in tqdm(enumerate(zip(self.s_train_loader, self.t_train_loader)), desc=f'Epoch {(EPOCH+1)} train'):
+            for batch_idx, (source_dict, target_dict) in tqdm(enumerate(zip(self.s_train_loader, self.t_train_loader)),
+                                                              total=len(self.s_train_loader),
+                                                              desc=f'Epoch {(EPOCH+1)} train'):
                 # 调节domain classifier的alpha
                 total_iters += 1
                 alpha = adjust_alpha(batch_idx, (EPOCH+1), min_len, self.max_epochs)
