@@ -53,17 +53,18 @@ if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
 start_time = datetime.datetime.now()
 print("Started at " + str(start_time.strftime('%Y-%m-%d %H:%M:%S')))
 
 dann_cls = DANN_Trainer(args)
-dann_cls.train()
-
-end_time = datetime.datetime.now()
-duration = end_time - start_time
-print("Ended at " + str(end_time.strftime('%Y-%m-%d %H:%M:%S')))
-print("Duration: " + str(duration))
+if args.isTrain:
+    dann_cls.train()
+    end_time = datetime.datetime.now()
+    duration = end_time - start_time
+    print("Ended at " + str(end_time.strftime('%Y-%m-%d %H:%M:%S')))
+    print("Duration: " + str(duration))
+else:
+    dann_cls.test()
 
 
 
