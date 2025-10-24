@@ -238,7 +238,7 @@ class DANN_Trainer(object):
                 #     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
                 #           % (EPOCH + 1, self.args.epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
 
-            val_info = self.val_on_epoch_end(self.t_val_loader)
+            val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
 
             # lr schedule
             if (EPOCH+1) <= self.warmup_epochs:
