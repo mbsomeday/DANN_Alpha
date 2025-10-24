@@ -33,7 +33,6 @@ def get_args():
     parser.add_argument('--test_txt', type=str, default=None, help='txt file that records test results')
 
 
-
     args = parser.parse_args()
 
     return args

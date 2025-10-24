@@ -27,6 +27,11 @@ class DANN_Trainer(object):
 
         torch.manual_seed(self.args.seed)
 
+        # 加载模型
+        self.feature_model = Feature_extractor().to(DEVICE)
+        self.label_model = Label_classifier().to(DEVICE)
+        self.domain_model = Domain_Classifier().to(DEVICE)
+
         # self.enc = Feature_extractor().to(DEVICE)
         # self.clf = Label_classifier().to(DEVICE)
         # self.fd = Domain_Classifier().to(DEVICE)
@@ -61,10 +66,7 @@ class DANN_Trainer(object):
         self.t_val_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='val.txt')
         self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=self.drop_last)
 
-        # 加载模型
-        self.feature_model = Feature_extractor().to(DEVICE)
-        self.label_model = Label_classifier().to(DEVICE)
-        self.domain_model = Domain_Classifier().to(DEVICE)
+
 
         # callbacks
         self.early_stopping = EarlyStopping(self.callback_path, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
