@@ -89,7 +89,7 @@ class DANN_Trainer(object):
                 print(msg)
                 f.write(msg + '\n')
 
-    def val_on_epoch_end(self, data_loader):
+    def val_on_epoch_end(self, data_loader, epoch):
         self.feature_model.eval()
         self.label_model.eval()
 
@@ -98,7 +98,7 @@ class DANN_Trainer(object):
         val_loss = 0
 
         with torch.no_grad():
-            for batch_idx, data_dict in enumerate(tqdm(data_loader)):
+            for batch_idx, data_dict in enumerate(tqdm(data_loader, desc=f'Epoch {epoch} val')):
                 images, labels = data_dict['image'].to(DEVICE), data_dict['ped_label'].to(DEVICE)
 
                 logits = self.label_model(self.feature_model(images))
