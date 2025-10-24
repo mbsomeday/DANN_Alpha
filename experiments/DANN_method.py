@@ -21,7 +21,7 @@ class DANN_Trainer(object):
         self.drop_last = False
         self.batch_size = 48
         self.base_lr = 0.001
-        self.min_epochs = 15
+        self.min_epochs = 1
         self.max_epochs = 50
         self.warmup_epochs = 5
 
