@@ -210,8 +210,8 @@ class DANN_Trainer(object):
                 t_domain_out = self.domain_model(t_feature, alpha=alpha)
 
                 # 两个classifier都用交叉熵损失
-                real_label = torch.ones(size=(source.shape[0], ), dtype=torch.long)
-                fake_label = torch.zeros(size=(target.shape[0], ), dtype=torch.long)
+                real_label = torch.ones(size=(source.shape[0], ), dtype=torch.long).to(DEVICE)
+                fake_label = torch.zeros(size=(target.shape[0], ), dtype=torch.long).to(DEVICE)
                 s_domain_err = self.ce(s_domain_out, real_label)
                 t_domain_err = self.ce(t_domain_out, fake_label)
 
