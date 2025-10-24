@@ -146,6 +146,8 @@ class DANN_Trainer(object):
                 self.label_model.load_state_dict(state_dict)
             elif item.split('_')[1] == 'domain':
                 self.domain_model.load_state_dict(state_dict)
+            else:
+                print('Not found model for weights!')
 
         # 开始测试
         y_true = []
