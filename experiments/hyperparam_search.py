@@ -179,7 +179,7 @@ class HPSelection():
             test_cm = confusion_matrix(y_true, y_pred)
 
             with open(self.opts.test_txt, 'a') as f:
-                msg = f'model_weights: {self.opts.weight_dir}\nds_name: {self.opts.test_ds_list[0]}\nTest loss: {test_loss:.4f}\nTest balanced acc: {test_ba:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_cm)}'
+                msg = f'model_weights: {self.opts.weight_dir}\nds_name: {self.opts.test_ds_list[0]}\nTest loss: {test_loss:.4f}\nTest balanced acc: {test_ba:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_cm)}\n'
                 print(msg)
                 f.write(msg)
 
