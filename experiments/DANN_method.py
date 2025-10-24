@@ -245,12 +245,16 @@ class DANN_Trainer(object):
                 self.optimizer.param_groups[0]['lr'] = self.base_lr * EPOCH / self.warmup_epochs
             else:
                 self.scheduler.step()
-                self.early_stopping(EPOCH+1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
 
+            # 在低于min train epoch时，每次重置early stop的参数
+            if (EPOCH + 1) <= self.min_epochs:
+                self.early_stopping.counter = 0
+                self.early_stopping.early_stop = False
+            else:  # 当训练次数超过最低epoch时，其中early_stop策略
+                self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
                 if self.early_stopping.early_stop:
                     print(f'Early Stopping!')
                     break
-
             # if (EPOCH + 1) <= self.args.min_train_epoch:
             #     if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
             #         _ = self.val_on_epoch_end(self.t_val_loader)
