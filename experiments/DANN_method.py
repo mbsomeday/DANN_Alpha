@@ -113,7 +113,7 @@ class DANN_Trainer(object):
         cm = confusion_matrix(y_true=y_true, y_pred=y_pred, labels=range(2))
 
         print(f'Val loss {val_loss:.6f}, val_bc:{val_bc:.4f}')
-        print(f'CM on validation set:\n{cm}')
+        # print(f'CM on validation set:\n{cm}')
 
         val_epoch_info = {
             'val_bc': val_bc,
