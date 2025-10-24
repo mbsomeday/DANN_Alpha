@@ -149,6 +149,9 @@ class DANN_Trainer(object):
             else:
                 print('Not found model for weights!')
 
+        self.feature_model.eval()
+        self.label_model.eval()
+
         # 开始测试
         y_true = []
         y_pred = []
@@ -168,6 +171,7 @@ class DANN_Trainer(object):
 
             test_ba = balanced_accuracy_score(y_true, y_pred)
             test_cm = confusion_matrix(y_true, y_pred)
+            print(f'cm: {test_cm}')
 
             with open(self.args.test_txt, 'a') as f:
                 msg = f'model_weights: {self.args.weight_dir}\nds_name: {self.args.test_ds_list[0]}\nTest loss: {test_loss:.4f}\nTest balanced acc: {test_ba:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_cm)}\n'
