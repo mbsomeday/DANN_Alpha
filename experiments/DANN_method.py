@@ -19,24 +19,13 @@ class DANN_Trainer(object):
         self.print_args()
 
         self.drop_last = False
+        self.batch_size = 48
+        self.base_lr = 0.001
+        self.min_epochs = 10
+        self.max_epochs = 50
+        self.warmup_epochs = 5
 
-        # 加载data
-        self.s_train_dataset = my_dataset(ds_name_list=args.source, path_key='Stage6_org', txt_name='augmentation_train.txt')
-        self.s_train_loader = DataLoader(self.s_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=self.drop_last)
-
-        self.s_val_dataset = my_dataset(ds_name_list=args.source, path_key='Stage6_org', txt_name='val.txt')
-        self.s_val_loader = DataLoader(self.s_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=self.drop_last)
-
-        self.t_train_dataset = my_dataset(ds_name_list=args.target, path_key='Stage6_org', txt_name='augmentation_train.txt')
-        self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.args.batch_size, shuffle=True, drop_last=self.drop_last)
-
-        self.t_val_dataset = my_dataset(ds_name_list=args.target, path_key='Stage6_org', txt_name='val.txt')
-        self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.args.batch_size, shuffle=False, drop_last=self.drop_last)
-
-        # 加载模型
-        self.feature_model = Feature_extractor().to(DEVICE)
-        self.label_model = Label_classifier().to(DEVICE)
-        self.domain_model = Domain_Classifier().to(DEVICE)
+        torch.manual_seed(self.args.seed)
 
         # self.enc = Feature_extractor().to(DEVICE)
         # self.clf = Label_classifier().to(DEVICE)
@@ -44,10 +33,7 @@ class DANN_Trainer(object):
 
         # 损失函数
         self.ce = nn.CrossEntropyLoss()
-        self.bce = nn.BCELoss()
-
-        # callbacks
-        self.early_stopping = EarlyStopping(self.callback_path, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
+        # self.bce = nn.BCELoss()
 
         self.best_ba = 0    # balanced acc
         self.time_taken = None
@@ -58,14 +44,39 @@ class DANN_Trainer(object):
 
         self.best_weight_dir = None
 
+        if self.args.isTrain:
+            self.train_setup()
+
+    def train_setup(self):
+        # 加载data
+        self.s_train_dataset = my_dataset(ds_name_list=self.args.source, path_key='Stage6_org', txt_name='augmentation_train.txt')
+        self.s_train_loader = DataLoader(self.s_train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
+
+        self.s_val_dataset = my_dataset(ds_name_list=self.args.source, path_key='Stage6_org', txt_name='val.txt')
+        self.s_val_loader = DataLoader(self.s_val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=self.drop_last)
+
+        self.t_train_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='augmentation_train.txt')
+        self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
+
+        self.t_val_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='val.txt')
+        self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=self.drop_last)
+
+        # 加载模型
+        self.feature_model = Feature_extractor().to(DEVICE)
+        self.label_model = Label_classifier().to(DEVICE)
+        self.domain_model = Domain_Classifier().to(DEVICE)
+
+        # callbacks
+        self.early_stopping = EarlyStopping(self.callback_path, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
+
+
 
     def print_args(self):
         '''
             Printing args to the console & Saing args to .txt file
-
         '''
         print('-' * 40 + ' Args ' + '-' * 40)
-        self.callback_dir = 'DANN' + '_' + self.args.source[0] + self.args.target[0]
+        self.callback_dir = 'DANN' + '_' + self.args.source[0] + self.args.target[0] + f'{self.args.seed}'
 
         self.callback_path = os.path.join(os.getcwd(), self.callback_dir)
         if not os.path.exists(self.callback_path):
@@ -110,37 +121,55 @@ class DANN_Trainer(object):
         }
         return DotDict(val_epoch_info)
 
-    # todo test 函数要大改
+    def decomp_cm(self, cm):
+        '''
+            对混淆矩阵进行分解
+        '''
+        tn, fp, fn, tp = cm.ravel()
+        return f'{tn}, {fp}, {fn}, {tp}'
+
     def test(self):
-        self.s_test_dataset = my_dataset(ds_name_list=self.args.source, path_key='Stage6_org', txt_name='test.txt')
-        self.s_test_loader = DataLoader(self.s_test_dataset, batch_size=self.args.batch_size, shuffle=False)
+        # load test data
+        test_dataset = my_dataset(ds_name_list=self.args.test_ds_list, path_key='Stage6_org', txt_name='test.txt')
+        test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 
-        self.t_test_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='test.txt')
-        self.t_test_loader = DataLoader(self.t_test_dataset, batch_size=self.args.batch_size, shuffle=False)
-
-        for item in os.listdir(self.best_weight_dir):
-            weight_path = os.path.join(self.best_weight_dir, item)
+        # load model
+        for item in os.listdir(self.args.weight_dir):
+            weight_path = os.path.join(self.args.weight_dir, item)
             print(f'weight_path: {weight_path}')
-            state_dict = torch.load(weight_path)
-            if item.split('_')[1] == 'enc':
+            state_dict = torch.load(weight_path, map_location=DEVICE)
+            if item.split('_')[1] == 'feature':
                 self.feature_model.load_state_dict(state_dict)
-            elif item.split('_')[1] == 'clf':
+            elif item.split('_')[1] == 'label':
                 self.label_model.load_state_dict(state_dict)
-            elif item.split('_')[1] == 'fd':
+            elif item.split('_')[1] == 'domain':
                 self.domain_model.load_state_dict(state_dict)
 
+        # 开始测试
+        y_true = []
+        y_pred = []
+        test_loss = 0.0
 
-        # print(f'Best Model on source train set:')
-        # _ = self.val_on_epoch_end(self.s_train_loader)
+        with torch.no_grad():
+            for batch_idx, data_dict in enumerate(tqdm(test_loader, desc='Test')):
+                images, labels = data_dict['image'].to(DEVICE), data_dict['ped_label'].to(DEVICE)
 
-        print(f'Best Model on source test set:')
-        _ = self.val_on_epoch_end(self.s_test_loader)
+                logits = self.label_model(self.feature_model(images))
+                preds = torch.argmax(logits, dim=1)
+                loss_value = self.ce(logits, labels)
+                test_loss += loss_value.item()
 
-        # print(f'Best Model on target train set:')
-        # _ = self.val_on_epoch_end(self.t_train_loader)
+                y_true.extend(labels.cpu().numpy())
+                y_pred.extend(preds.cpu().numpy())
 
-        print(f'Best Model on target test set:')
-        _ = self.val_on_epoch_end(self.t_test_loader)
+            test_ba = balanced_accuracy_score(y_true, y_pred)
+            test_cm = confusion_matrix(y_true, y_pred)
+
+            with open(self.args.test_txt, 'a') as f:
+                msg = f'model_weights: {self.args.weight_dir}\nds_name: {self.args.test_ds_list[0]}\nTest loss: {test_loss:.4f}\nTest balanced acc: {test_ba:.4f}\ntn, fp, fn, tp: {self.decomp_cm(test_cm)}\n'
+                print(msg)
+                f.write(msg)
+
 
     def train(self):
         s_iter_per_epoch = len(self.s_train_loader)
@@ -152,8 +181,8 @@ class DANN_Trainer(object):
         print("Target iters per epoch: %d" % (t_iter_per_epoch))
         print("iters per epoch: %d" % (min(s_iter_per_epoch, t_iter_per_epoch)))
 
-        # todo：这里看一下用list还是别的写法
-        self.optimizer = optim.Adam(list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), self.args.lr, betas=(0.9, 0.999), weight_decay=self.args.weight_decay)
+        self.optimizer = optim.Adam(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_epochs - self.warmup_epochs)
 
         for EPOCH in range(self.args.epochs):
             self.label_model.train()
@@ -209,8 +238,16 @@ class DANN_Trainer(object):
 
             val_info = self.val_on_epoch_end(self.t_val_loader)
 
-            if (EPOCH + 1) > self.args.min_train_epoch:
+            # lr schedule
+            if (EPOCH+1) <= self.warmup_epochs:
+                self.optimizer.param_groups[0]['lr'] = self.base_lr * EPOCH / self.warmup_epochs
+            else:
+                self.scheduler.step()
                 self.early_stopping(EPOCH+1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
+
+                if self.early_stopping.early_stop:
+                    print(f'Early Stopping!')
+                    break
 
             # if (EPOCH + 1) <= self.args.min_train_epoch:
             #     if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
@@ -218,12 +255,8 @@ class DANN_Trainer(object):
             # else:
             #     val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
             #     self.early_stopping(EPOCH+1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_epoch_info)
+            # self.best_weight_dir = self.early_stopping.best_weight_dir
 
-            self.best_weight_dir = self.early_stopping.best_weight_dir
-
-            if self.early_stopping.early_stop:
-                print(f'Early Stopping!')
-                break
 
 
 

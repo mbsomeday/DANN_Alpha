@@ -424,7 +424,7 @@ def analyze_info(txt_path):
     plt.plot(epochs, val_accs, 'r-', label='Val Balanced Accuracy', linewidth=2, marker='s')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
-    plt.title('Training and Validation Accuracy')
+    plt.title('Training and Validation Balanced Accuracy')
     plt.legend()
     plt.grid(True, alpha=0.3)
 
@@ -438,8 +438,16 @@ def analyze_info(txt_path):
 
 
 if __name__ == '__main__':
-    txt_path = r'D:\my_phd\on_git\DANN_Alpha\Results\48_0dot001_Adam_COS_.txt'
-    analyze_info(txt_path)
+    get_name = '64 0.001 Adam EXP '
+
+    txt_dir = r'D:\my_phd\Results\DANN_HP_Search\hp_txt'
+    comb_name = get_name.replace(' ', '_').replace('.', 'dot') + '.txt'
+    comb_txt = os.path.join(txt_dir, comb_name)
+
+    fig_name = get_name.replace(' ', '_')
+    print(fig_name)
+
+    analyze_info(comb_txt)
 
 
 

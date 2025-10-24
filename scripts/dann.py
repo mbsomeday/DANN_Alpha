@@ -15,8 +15,6 @@ def get_args():
     # train
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--min_train_epoch', type=int, default=30)
-    parser.add_argument('--weight_decay', type=float, default=1e-5)
-    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--monitored_metric', default='loss')
 
     # callbacks
@@ -24,8 +22,6 @@ def get_args():
     parser.add_argument('--patience', default=10)
 
     # test
-    parser.add_argument('--adapt_test_epoch', type=int, default=5)
-
     parser.add_argument('--model_path', type=str, default='./model')
     parser.add_argument('--seed', default=13)
 
