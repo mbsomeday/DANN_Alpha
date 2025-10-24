@@ -13,6 +13,7 @@ def get_args():
 
     # train
     parser.add_argument('--monitored_metric', default='loss')
+    parser.add_argument('--isTrain', action='store_true')
 
     # callbacks
     parser.add_argument('--top_k', default=2)
