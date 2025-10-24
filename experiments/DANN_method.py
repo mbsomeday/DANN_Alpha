@@ -76,7 +76,7 @@ class DANN_Trainer(object):
             Printing args to the console & Saing args to .txt file
         '''
         print('-' * 40 + ' Args ' + '-' * 40)
-        self.callback_dir = 'DANN' + '_' + self.args.source[0] + self.args.target[0] + f'{self.args.seed}'
+        self.callback_dir = 'DANN' + '_' + self.args.source[0] + self.args.target[0] + f'_{self.args.seed}'
 
         self.callback_path = os.path.join(os.getcwd(), self.callback_dir)
         if not os.path.exists(self.callback_path):
