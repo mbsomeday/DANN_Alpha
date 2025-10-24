@@ -10,11 +10,8 @@ def get_args():
     # data
     parser.add_argument('--source', nargs='+', default=['D1'])
     parser.add_argument('--target', nargs='+', default=['D2'])
-    parser.add_argument('--batch_size', default=4, type=int)
 
     # train
-    parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--min_train_epoch', type=int, default=30)
     parser.add_argument('--monitored_metric', default='loss')
 
     # callbacks
@@ -22,7 +19,8 @@ def get_args():
     parser.add_argument('--patience', default=10)
 
     # test
-    parser.add_argument('--model_path', type=str, default='./model')
+    parser.add_argument('--test_ds_list', nargs='+', default=None)
+    parser.add_argument('--weight_dir', type=str, default='./model')
     parser.add_argument('--seed', default=13)
 
 

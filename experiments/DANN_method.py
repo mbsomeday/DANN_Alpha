@@ -21,7 +21,7 @@ class DANN_Trainer(object):
         self.drop_last = False
         self.batch_size = 48
         self.base_lr = 0.001
-        self.min_epochs = 10
+        self.min_epochs = 15
         self.max_epochs = 50
         self.warmup_epochs = 5
 
@@ -184,7 +184,7 @@ class DANN_Trainer(object):
         self.optimizer = optim.Adam(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_epochs - self.warmup_epochs)
 
-        for EPOCH in range(self.args.epochs):
+        for EPOCH in range(self.max_epochs):
             self.label_model.train()
             self.feature_model.train()
             self.domain_model.train()
@@ -192,7 +192,7 @@ class DANN_Trainer(object):
             for batch_idx, (source_dict, target_dict) in enumerate(zip(self.s_train_loader, self.t_train_loader)):
                 # 调节domain classifier的alpha
                 total_iters += 1
-                alpha = adjust_alpha(batch_idx, (EPOCH+1), min_len, self.args.epochs)
+                alpha = adjust_alpha(batch_idx, (EPOCH+1), min_len, self.max_epochs)
 
                 # 加载数据
                 source, s_labels = source_dict['image'].to(DEVICE), source_dict['ped_label'].to(DEVICE)
