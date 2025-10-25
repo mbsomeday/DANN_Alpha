@@ -25,7 +25,7 @@ class my_dataset(Dataset):
         self.txt_name = txt_name
         self.img_transforms = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+            # transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
 
         self.images, self.ped_labels, self.ds_labels = self.init_ImagesLabels()
