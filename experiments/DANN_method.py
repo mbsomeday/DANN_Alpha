@@ -66,8 +66,6 @@ class DANN_Trainer(object):
         self.t_val_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='val.txt')
         self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=self.drop_last)
 
-
-
         # callbacks
         self.early_stopping = EarlyStopping(self.callback_path, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
 
@@ -178,6 +176,17 @@ class DANN_Trainer(object):
                 print(msg)
                 f.write(msg)
 
+    def update_learning_rate(self, epoch):
+        old_lr = self.optimizer.param_groups[0]['lr']
+
+        if epoch <= self.args.warmup_epochs:
+            self.optimizer.param_groups[0]['lr'] = self.args.base_lr * epoch / self.args.warmup_epochs
+        else:
+            self.scheduler.step()
+
+        lr = self.optimizer.param_groups[0]['lr']
+        print('learning rate %.7f -> %.7f' % (old_lr, lr))
+
 
     def train(self):
         s_iter_per_epoch = len(self.s_train_loader)
@@ -225,15 +234,6 @@ class DANN_Trainer(object):
                 s_domain_err = self.ce(s_domain_out, real_label)
                 t_domain_err = self.ce(t_domain_out, fake_label)
 
-                # s_deep = self.feature_model(source)
-                # s_out = self.label_model(s_deep)
-                # t_deep = self.feature_model(target)
-                # t_out = self.label_model(t_deep)
-                # s_fd_out = self.domain_model(s_deep, alpha=alpha)
-                # t_fd_out = self.domain_model(t_deep, alpha=alpha)
-                # s_domain_err = self.bce(s_fd_out, self.real_label)
-                # t_domain_err = self.bce(t_fd_out, self.fake_label)
-
                 domain_loss = s_domain_err + t_domain_err
                 s_label_loss = self.ce(s_out, s_labels)
                 loss = s_label_loss + domain_loss
@@ -242,17 +242,10 @@ class DANN_Trainer(object):
                 loss.backward()
                 self.optimizer.step()
 
-                # if batch_idx % 50 == 0 or batch_idx == (min_len - 1):
-                #     print('Ep: %d/%d, iter: %d/%d, total_iters: %d, s_err: %.4f, d_err: %.4f, alpha: %.4f'
-                #           % (EPOCH + 1, self.args.epochs, batch_idx + 1, min_len, total_iters, s_clf_loss, disc_loss, alpha))
-
             val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
 
-            # lr schedule
-            if (EPOCH+1) <= self.warmup_epochs:
-                self.optimizer.param_groups[0]['lr'] = self.base_lr * EPOCH / self.warmup_epochs
-            else:
-                self.scheduler.step()
+            self.update_learning_rate(EPOCH+1)
+
 
             # 在低于min train epoch时，每次重置early stop的参数
             if (EPOCH + 1) <= self.min_epochs:
@@ -263,13 +256,6 @@ class DANN_Trainer(object):
                 if self.early_stopping.early_stop:
                     print(f'Early Stopping!')
                     break
-            # if (EPOCH + 1) <= self.args.min_train_epoch:
-            #     if (EPOCH + 1) % self.args.adapt_test_epoch == 0:
-            #         _ = self.val_on_epoch_end(self.t_val_loader)
-            # else:
-            #     val_epoch_info = self.val_on_epoch_end(self.t_val_loader)
-            #     self.early_stopping(EPOCH+1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_epoch_info)
-            # self.best_weight_dir = self.early_stopping.best_weight_dir
 
 
 
