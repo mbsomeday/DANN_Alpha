@@ -64,7 +64,7 @@ class DANN_Trainer(object):
         self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
 
         self.t_val_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='val.txt')
-        self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=self.drop_last)
+        self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=128, shuffle=False, drop_last=self.drop_last)
 
         # callbacks
         self.early_stopping = EarlyStopping(self.callback_path, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
