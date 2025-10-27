@@ -19,11 +19,11 @@ class DANN_Trainer(object):
         self.print_args()
 
         self.drop_last = False
-        self.batch_size = 48
-        self.base_lr = 0.001
-        self.min_epochs = 15
+        self.batch_size = 64
+        self.base_lr = 0.01
+        self.min_epochs = 10
         self.max_epochs = 50
-        self.warmup_epochs = 5
+        self.warmup_epochs = 3
 
         torch.manual_seed(self.args.seed)
 
@@ -176,13 +176,25 @@ class DANN_Trainer(object):
                 print(msg)
                 f.write(msg)
 
+    # def update_learning_rate(self, epoch):
+    #     old_lr = self.optimizer.param_groups[0]['lr']
+    #
+    #     if epoch <= self.args.warmup_epochs:
+    #         self.optimizer.param_groups[0]['lr'] = self.args.base_lr * epoch / self.args.warmup_epochs
+    #     else:
+    #         self.scheduler.step()
+    #
+    #     lr = self.optimizer.param_groups[0]['lr']
+    #     print('learning rate %.7f -> %.7f' % (old_lr, lr))
+
     def update_learning_rate(self, epoch):
         old_lr = self.optimizer.param_groups[0]['lr']
 
-        if epoch <= self.args.warmup_epochs:
+        # warm-up阶段
+        if epoch <= self.args.warmup_epochs:  # warm-up阶段
             self.optimizer.param_groups[0]['lr'] = self.args.base_lr * epoch / self.args.warmup_epochs
         else:
-            self.scheduler.step()
+            self.optimizer.param_groups[0]['lr'] = self.args.base_lr * 0.963 ** (epoch / 3)  # gamma=0.963, lr decay epochs=3
 
         lr = self.optimizer.param_groups[0]['lr']
         print('learning rate %.7f -> %.7f' % (old_lr, lr))
@@ -198,8 +210,11 @@ class DANN_Trainer(object):
         print("Target iters per epoch: %d" % (t_iter_per_epoch))
         print("iters per epoch: %d" % (min(s_iter_per_epoch, t_iter_per_epoch)))
 
-        self.optimizer = optim.Adam(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_epochs - self.warmup_epochs)
+        # self.optimizer = optim.Adam(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
+        # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_epochs - self.warmup_epochs)
+
+        self.optimizer = torch.optim.RMSprop(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=self.args.base_lr, weight_decay=1e-5, eps=0.001)
+
 
         for EPOCH in range(self.max_epochs):
             self.label_model.train()
