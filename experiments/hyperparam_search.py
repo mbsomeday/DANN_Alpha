@@ -26,7 +26,7 @@ class HPSelection():
 
         hp_dict = {
             'batch_size': [48, 64],
-            'base_lr': [1e-3, 5e-4],
+            'base_lr': [0.1, 0.01, 0.001],
             'optimizer': ['Adam', 'SGD'],
             'scheduler': ['COS', 'EXP']
         }
@@ -73,6 +73,10 @@ class HPSelection():
             print(f'当前为训练模式\n共有的超参数组合数: {len(self.all_combinations)}')
 
     def train_setup(self):
+        '''
+            在training setup时，只初始化数据，其他变量(如optimizer)在不同的组合中需要重新设置
+        :return:
+        '''
         # source train
         s_trainset = my_dataset(ds_name_list=self.source, path_key='Stage6_org', txt_name='train.txt')
         self.s_mini_trainset, _ = random_split(s_trainset, [self.mini_train_num, len(s_trainset) - self.mini_train_num])
@@ -283,14 +287,10 @@ class HPSelection():
             self.batch_size, self.base_lr, optimizer_type, scheduler_type = comb_info
 
             # data loader
-            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True,
-                                                 drop_last=self.drop_last)
-            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False,
-                                               drop_last=self.drop_last)
-            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True,
-                                                 drop_last=self.drop_last)
-            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False,
-                                               drop_last=self.drop_last)
+            self.s_mini_trainloader = DataLoader(self.s_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
+            self.s_mini_valloader = DataLoader(self.s_mini_valset, batch_size=128, shuffle=False, drop_last=self.drop_last)
+            self.t_mini_trainloader = DataLoader(self.t_mini_trainset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
+            self.t_mini_valloader = DataLoader(self.t_mini_valset, batch_size=128, shuffle=False, drop_last=self.drop_last)
 
             # # 用于 domain classifier训练的label
             # self.fake_label = torch.FloatTensor(self.batch_size, 1).fill_(0).to(DEVICE)
