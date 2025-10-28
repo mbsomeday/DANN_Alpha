@@ -279,22 +279,22 @@ class DANN_Trainer(object):
             # 在epoch开始之前调节lr
             self.update_learning_rate(EPOCH + 1)
 
-            # train_info = self.train_one_epoch(EPOCH+1, min_len=min_len)
-            # val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
+            train_info = self.train_one_epoch(EPOCH+1, min_len=min_len)
+            val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
 
             print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
-            # print(f'Train loss {train_info["loss"]:.6f}, train_bc:{train_info["train_bc"]:.4f}')
-            # print(f'Val loss {val_info["loss"]:.6f}, val_bc:{val_info["val_bc"]:.4f}')
-            #
-            # # 在低于min train epoch时，每次重置early stop的参数
-            # if (EPOCH + 1) <= self.min_epochs:
-            #     self.early_stopping.counter = 0
-            #     self.early_stopping.early_stop = False
-            # else:  # 当训练次数超过最低epoch时，其中early_stop策略
-            #     self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
-            #     if self.early_stopping.early_stop:
-            #         print(f'Early Stopping!')
-            #         break
+            print(f'Train loss {train_info["loss"]:.6f}, train_bc:{train_info["train_bc"]:.4f}')
+            print(f'Val loss {val_info["loss"]:.6f}, val_bc:{val_info["val_bc"]:.4f}')
+
+            # 在低于min train epoch时，每次重置early stop的参数
+            if (EPOCH + 1) <= self.min_epochs:
+                self.early_stopping.counter = 0
+                self.early_stopping.early_stop = False
+            else:  # 当训练次数超过最低epoch时，其中early_stop策略
+                self.early_stopping(EPOCH + 1, enc=self.feature_model, clf=self.label_model, fd=self.domain_model, val_epoch_info=val_info)
+                if self.early_stopping.early_stop:
+                    print(f'Early Stopping!')
+                    break
 
 
 
