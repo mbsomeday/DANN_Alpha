@@ -187,7 +187,7 @@ class DANN_Trainer(object):
     #     print('learning rate %.7f -> %.7f' % (old_lr, lr))
 
     def update_learning_rate(self, epoch):
-        old_lr = self.optimizer.param_groups[0]['lr']
+        # old_lr = self.optimizer.param_groups[0]['lr']
 
         # warm-up阶段
         if epoch <= self.warmup_epochs:  # warm-up阶段
@@ -195,8 +195,8 @@ class DANN_Trainer(object):
         else:
             self.optimizer.param_groups[0]['lr'] = self.args.base_lr * 0.963 ** (epoch / 3)  # gamma=0.963, lr decay epochs=3
 
-        lr = self.optimizer.param_groups[0]['lr']
-        print('learning rate %.7f -> %.7f' % (old_lr, lr))
+        # lr = self.optimizer.param_groups[0]['lr']
+        # print('learning rate %.7f -> %.7f' % (old_lr, lr))
 
     def train_one_epoch(self, epoch, min_len):
         self.label_model.train()
@@ -274,17 +274,17 @@ class DANN_Trainer(object):
 
         self.optimizer = torch.optim.RMSprop(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=0.0, weight_decay=1e-5, eps=0.001)
 
-
         for EPOCH in range(self.max_epochs):
+
+            # 在epoch开始之前调节lr
+            self.update_learning_rate(EPOCH + 1)
 
             train_info = self.train_one_epoch(EPOCH+1, min_len=min_len)
             val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
 
+            print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
             print(f'Train loss {train_info["loss"]:.6f}, train_bc:{train_info["train_bc"]:.4f}')
             print(f'Val loss {val_info["loss"]:.6f}, val_bc:{val_info["val_bc"]:.4f}')
-
-            self.update_learning_rate(EPOCH+1)
-
 
             # 在低于min train epoch时，每次重置early stop的参数
             if (EPOCH + 1) <= self.min_epochs:
