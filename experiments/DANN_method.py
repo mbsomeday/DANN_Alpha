@@ -282,7 +282,7 @@ class DANN_Trainer(object):
             # train_info = self.train_one_epoch(EPOCH+1, min_len=min_len)
             # val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
 
-            # print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
+            print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
             # print(f'Train loss {train_info["loss"]:.6f}, train_bc:{train_info["train_bc"]:.4f}')
             # print(f'Val loss {val_info["loss"]:.6f}, val_bc:{val_info["val_bc"]:.4f}')
             #
