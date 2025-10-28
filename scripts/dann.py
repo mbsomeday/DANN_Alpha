@@ -22,6 +22,7 @@ def get_args():
     parser.add_argument('--monitored_metric', default='loss')
     parser.add_argument('--isTrain', action='store_true')
     parser.add_argument('--seed', default=13)
+    parser.add_argument('--base_lr', type=float, default=0.01)
 
     # callbacks
     parser.add_argument('--top_k', default=1)

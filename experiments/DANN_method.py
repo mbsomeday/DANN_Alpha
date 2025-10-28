@@ -20,7 +20,7 @@ class DANN_Trainer(object):
 
         self.drop_last = False
         self.batch_size = 64
-        self.base_lr = 0.01
+        # self.base_lr = 0.01
         self.min_epochs = 10
         self.max_epochs = 50
         self.warmup_epochs = 3
@@ -191,9 +191,9 @@ class DANN_Trainer(object):
 
         # warm-up阶段
         if epoch <= self.warmup_epochs:  # warm-up阶段
-            self.optimizer.param_groups[0]['lr'] = self.base_lr * epoch / self.warmup_epochs
+            self.optimizer.param_groups[0]['lr'] = self.args.base_lr * epoch / self.warmup_epochs
         else:
-            self.optimizer.param_groups[0]['lr'] = self.base_lr * 0.963 ** (epoch / 3)  # gamma=0.963, lr decay epochs=3
+            self.optimizer.param_groups[0]['lr'] = self.args.base_lr * 0.963 ** (epoch / 3)  # gamma=0.963, lr decay epochs=3
 
         lr = self.optimizer.param_groups[0]['lr']
         print('learning rate %.7f -> %.7f' % (old_lr, lr))
