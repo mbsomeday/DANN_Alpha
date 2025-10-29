@@ -10,7 +10,7 @@ from utils import adjust_alpha, DotDict
 from models.DANN import Feature_extractor, Label_classifier, Domain_Classifier
 from data.dataset import my_dataset
 from configs.ds_path import DEVICE
-from training.callbacks import EarlyStopping
+from training.callbacks import EarlyStopping, Model_Logger
 
 
 class DANN_Trainer(object):
@@ -36,8 +36,8 @@ class DANN_Trainer(object):
         # self.clf = Label_classifier().to(DEVICE)
         # self.fd = Domain_Classifier().to(DEVICE)
 
-        # 损失函数
-        self.ce = nn.CrossEntropyLoss()
+        # 损失函数，训练和测试都需要计算loss
+        self.ce = nn.CrossEntropyLoss().to(DEVICE)
         # self.bce = nn.BCELoss()
 
         self.best_ba = 0    # balanced acc
@@ -66,9 +66,12 @@ class DANN_Trainer(object):
         self.t_val_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='val.txt')
         self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=128, shuffle=False, drop_last=self.drop_last)
 
-        # callbacks
-        self.early_stopping = EarlyStopping(self.callback_path, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
+        # optimizer
+        self.optimizer = torch.optim.RMSprop(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=0.0, weight_decay=1e-5, eps=0.001)
 
+        # callbacks
+        self.early_stopping = EarlyStopping(self.callback_dir, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
+        self.model_logger = Model_Logger(callback_dir=self.callback_dir, model_name='DANN', ds_name_list=[self.args.source, self.args.target])
 
 
     def print_args(self):
@@ -76,14 +79,14 @@ class DANN_Trainer(object):
             Printing args to the console & Saing args to .txt file
         '''
         print('-' * 40 + ' Args ' + '-' * 40)
-        self.callback_dir = 'DANN' + '_' + self.args.source[0] + self.args.target[0] + f'_{self.args.seed}'
+        self.callback_name = 'DANN' + '_' + self.args.source[0] + self.args.target[0] + f'_{self.args.seed}'
 
-        self.callback_path = os.path.join(os.getcwd(), self.callback_dir)
-        if not os.path.exists(self.callback_path):
-            os.mkdir(self.callback_path)
-        print(f'Callback dir: {self.callback_path}')
+        self.callback_dir = os.path.join(os.getcwd(), self.callback_name)
+        if not os.path.exists(self.callback_dir):
+            os.mkdir(self.callback_dir)
+        print(f'Callback dir: {self.callback_dir}')
 
-        with open(os.path.join(self.callback_path, 'Args.txt'), 'a') as f:
+        with open(os.path.join(self.callback_dir, 'Args.txt'), 'a') as f:
             for k, v in vars(self.args).items():
                 msg = f'{k}: {v}'
                 print(msg)
@@ -115,7 +118,7 @@ class DANN_Trainer(object):
         # print(f'CM on validation set:\n{cm}')
 
         val_epoch_info = {
-            'val_bc': val_bc,
+            'balanced_accuracy': val_bc,
             'loss': val_loss
         }
         return DotDict(val_epoch_info)
@@ -252,7 +255,7 @@ class DANN_Trainer(object):
         train_bc = balanced_accuracy_score(y_true, y_pred)
 
         train_epoch_info = {
-            'train_bc': train_bc,
+            'balanced_accuracy': train_bc,
             'loss': loss_val
         }
 
@@ -272,7 +275,6 @@ class DANN_Trainer(object):
         # self.optimizer = optim.Adam(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=self.base_lr, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
         # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.max_epochs - self.warmup_epochs)
 
-        self.optimizer = torch.optim.RMSprop(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=0.0, weight_decay=1e-5, eps=0.001)
 
         for EPOCH in range(self.max_epochs):
 
@@ -283,8 +285,11 @@ class DANN_Trainer(object):
             val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
 
             print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
-            print(f'Train loss {train_info["loss"]:.6f}, train_bc:{train_info["train_bc"]:.4f}')
-            print(f'Val loss {val_info["loss"]:.6f}, val_bc:{val_info["val_bc"]:.4f}')
+            print(f'Train loss {train_info["loss"]:.6f}, train_bc:{train_info["balanced_accuracy"]:.4f}')
+            print(f'Val loss {val_info["loss"]:.6f}, val_bc:{val_info["balanced_accuracy"]:.4f}')
+
+            # callback, model logger
+            self.model_logger(epoch=EPOCH+1, training_info=train_info, val_info=val_info)
 
             # 在低于min train epoch时，每次重置early stop的参数
             if (EPOCH + 1) <= self.min_epochs:

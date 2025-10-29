@@ -123,6 +123,69 @@ class EarlyStopping():
         torch.save(fd.state_dict(), os.path.join(self.best_weight_dir, f'dann_domain_{self.cur_epoch:02d}.pt'))
 
 
+class Model_Logger():
+    '''
+        用于记录训练过程中的loss，accuracy变化情况
+    '''
+    def __init__(self, callback_dir, model_name, ds_name_list):
+        super().__init__()
+        self.callback_dir = callback_dir
+        self.model_name = model_name
+        self.ds_name_list = 'to'.join(ds_name_list)
+        self.txt_path = os.path.join(self.callback_dir, 'Train_info.txt')
+
+        # 在文件的开头写入训练的信息
+        with open(self.txt_path, 'a') as f:
+            msg = f'Model: {model_name}, Training on datasets: {self.ds_name_list}\n'
+            f.write(msg)
+
+    @staticmethod
+    def _get_msg_format(key):
+        '''
+            tool_function，对 accuracy 和 loss 进行输出时设置不同的打印位数
+        '''
+        if key in ['loss', 'accuracy', 'balanced_accuracy', 'ba']:
+            return '{:.4f}'
+        else:
+            return '{}'
+
+    def get_print_msg(self, info_dict):
+        msg = ', '.join([f"{k}: {self._get_msg_format(k).format(v)}" for k, v in info_dict.items()]) + '\n'
+        return msg
+
+    def __call__(self, epoch, training_info, val_info):
+        train_msg = 'Train: ' + self.get_print_msg(info_dict=training_info)
+        val_msg = 'Val: ' + self.get_print_msg(info_dict=val_info)
+        with open(self.txt_path, 'a') as f:
+            f.write(f'------------------------------ Epoch: {epoch} ------------------------------\n')
+            f.write(train_msg)
+            f.write(val_msg)
+
+
+# if __name__ == '__main__':
+#     callback_dir = r'D:\my_phd\on_git\DANN_Alpha\training'
+#     model_name = 'model_name'
+#     ds_name_list = ['D1']
+#
+#     m_log = Model_Logger(callback_dir, model_name, ds_name_list)
+#
+#     epoch = 5
+#     training_info = {
+#         'loss': 1.23213,
+#         'balanced_accuracy': 0.8873
+#     }
+#     val_info = {
+#         'loss': 8.123213,
+#         'balanced_accuracy': 0.8133
+#     }
+#     m_log(epoch, training_info, val_info)
+
+
+
+
+
+
+
 
 
 

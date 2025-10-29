@@ -19,6 +19,9 @@ class GradReverse(Function):
 
 
 def adjust_alpha(i, epoch, min_len, nepochs):
+    '''
+        sigmoid函数的变体，将alpha逐渐从0增加到1
+    '''
     p = float(i + epoch * min_len) / nepochs / min_len
     o = -10
     alpha = 2. / (1. + math.exp(o * p)) - 1
