@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from utils import adjust_alpha, DotDict
 from models.DANN import Feature_extractor, Label_classifier, Domain_Classifier
-from data.dataset import my_dataset
+from data.dataset import my_dataset, noise_dataset
 from configs.ds_path import DEVICE
 from training.callbacks import EarlyStopping, Model_Logger
 
@@ -60,11 +60,19 @@ class DANN_Trainer(object):
         self.s_val_dataset = my_dataset(ds_name_list=self.args.source, path_key='Stage6_org', txt_name='val.txt')
         self.s_val_loader = DataLoader(self.s_val_dataset, batch_size=self.batch_size, shuffle=False, drop_last=self.drop_last)
 
-        self.t_train_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='augmentation_train.txt')
+        # 用random noise代替target domain
+        self.t_train_dataset = noise_dataset(num=len(self.s_train_dataset))
         self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
 
-        self.t_val_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='val.txt')
+        self.t_val_dataset = noise_dataset(num=len(self.s_val_dataset))
         self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=128, shuffle=False, drop_last=self.drop_last)
+
+        # 用真实数据作为target domain
+        # self.t_train_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='augmentation_train.txt')
+        # self.t_train_loader = DataLoader(self.t_train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=self.drop_last)
+        #
+        # self.t_val_dataset = my_dataset(ds_name_list=self.args.target, path_key='Stage6_org', txt_name='val.txt')
+        # self.t_val_loader = DataLoader(self.t_val_dataset, batch_size=128, shuffle=False, drop_last=self.drop_last)
 
         # optimizer
         self.optimizer = torch.optim.RMSprop(params=list(self.feature_model.parameters()) + list(self.label_model.parameters()) + list(self.domain_model.parameters()), lr=0.0, weight_decay=1e-5, eps=0.001)

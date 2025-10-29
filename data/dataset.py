@@ -1,5 +1,5 @@
 import numpy as np
-import os
+import os, torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
@@ -95,9 +95,58 @@ class my_dataset(Dataset):
 
 
 
+class noise_dataset(Dataset):
+    def __init__(self, num):
+        self.num = num
+        self.images = torch.randn(self.num, 3, 224, 224)
+
+    def __len__(self):
+        return self.num
+
+    def __getitem__(self, idx):
+        return self.images[idx]
 
 
 
+# if __name__ == '__main__':
+#     import matplotlib.pyplot as plt
+#
+#
+#     def are_all_different(tensor_batch):
+#         """
+#         高效检查批次中所有张量是否不同
+#         """
+#         batch_size = tensor_batch.shape[0]
+#         for i in range(batch_size):
+#             for j in range(i + 1, batch_size):
+#                 if torch.allclose(tensor_batch[i], tensor_batch[j], atol=1e-6):
+#                     return False
+#         return True
+#
+#     noise_ds = get_noise_dataset(num=1000)
+#     noise_loader = DataLoader(noise_ds, batch_size=4)
+#     for data in noise_loader:
+#         print(data.shape)
+#         flag = are_all_different(data)
+#         print(flag)
+#         # for image in data:
+#         #     tensor_np = image.detach().numpy()
+#         #     print(tensor_np.shape)
+#         #
+#         #     # 调整维度顺序为 [height, width, channels]
+#         #     if tensor_np.shape[0] == 3:  # CHW -> HWC
+#         #         tensor_np = np.transpose(tensor_np, (1, 2, 0))
+#         #
+#         #     # 归一化到 [0,1] 范围
+#         #     tensor_np = (tensor_np - tensor_np.min()) / (tensor_np.max() - tensor_np.min() + 1e-8)
+#         #
+#         #     # plt.figure(figsize=(8, 6))
+#         #     plt.imshow(tensor_np)
+#         #     plt.axis('off')
+#         #     plt.colorbar()
+#         #     plt.show()
+#
+#         break
 
 
 
