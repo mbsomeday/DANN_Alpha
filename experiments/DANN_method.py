@@ -227,7 +227,7 @@ class DANN_Trainer(object):
 
             # 加载数据
             source, s_labels = source_dict['image'].to(DEVICE), source_dict['ped_label'].to(DEVICE)
-            target, _ = target_dict['image'].to(DEVICE), target_dict['ped_label'].to(DEVICE)
+            target = target_dict['image'].to(DEVICE)
 
             # label classifier
             s_feature = self.feature_model(source)
