@@ -105,7 +105,10 @@ class noise_dataset(Dataset):
         return self.num
 
     def __getitem__(self, idx):
-        return self.images[idx]
+        data_dict = {
+            'image': self.images[idx]
+        }
+        return data_dict
 
 
 
