@@ -290,8 +290,8 @@ class DANN_Trainer(object):
             self.update_learning_rate(EPOCH + 1)
 
             train_info = self.train_one_epoch(EPOCH+1, min_len=min_len)
-            # val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)
-            val_info = self.val_on_epoch_end(self.s_val_loader, epoch=EPOCH+1)
+            # val_info = self.val_on_epoch_end(self.t_val_loader, epoch=EPOCH+1)        # 用真实数据作为target
+            val_info = self.val_on_epoch_end(self.s_val_loader, epoch=EPOCH+1)          # 用noise作为target
 
             print(f'Learning Rate: {self.optimizer.param_groups[0]["lr"]}')
             print(f'Train loss {train_info["loss"]:.6f}, train_bc:{train_info["balanced_accuracy"]:.4f}')
