@@ -99,6 +99,7 @@ class noise_dataset(Dataset):
     def __init__(self, num):
         self.num = num
         self.images = torch.randn(self.num, 3, 224, 224)
+        print(f'Generated {self.num} noise samples.')
 
     def __len__(self):
         return self.num

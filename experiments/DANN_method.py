@@ -79,7 +79,7 @@ class DANN_Trainer(object):
 
         # callbacks
         self.early_stopping = EarlyStopping(self.callback_dir, top_k=self.args.top_k, cur_epoch=0, patience=self.args.patience, monitored_metric=self.args.monitored_metric)
-        self.model_logger = Model_Logger(callback_dir=self.callback_dir, model_name='DANN', ds_name_list=[self.args.source, self.args.target])
+        self.model_logger = Model_Logger(callback_dir=self.callback_dir, model_name='DANN', ds_name_list=[self.args.source[0], self.args.target[0]])
 
 
     def print_args(self):
